@@ -8,13 +8,6 @@ from dataset.coco_detection import cxcywh_to_xyxy
 from training.matcher import greedy_match
 
 
-def get_loss():
-    """
-    Standard classification loss (used by the original CNN classifier).
-    """
-    return nn.CrossEntropyLoss()
-
-
 # Module-level instance — CrossEntropyLoss is stateless, safe to reuse.
 _cls_criterion = nn.CrossEntropyLoss()
 
@@ -58,8 +51,8 @@ def detection_loss(
     per_image_box: List[torch.Tensor] = []
 
     for i in range(B):
-        gt_boxes  = targets[i]["boxes"].to(device)    # (N, 4) xyxy
-        gt_labels = targets[i]["labels"].to(device)   # (N,)   1-indexed foreground
+        gt_boxes  = targets[i]["boxes"]    # (N, 4) xyxy  — already on device
+        gt_labels = targets[i]["labels"]   # (N,)         — already on device
 
         N = gt_boxes.shape[0]
 
