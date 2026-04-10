@@ -44,9 +44,9 @@ def main() -> None:
     print(f"Using device: {device}")
 
     # ── Validate paths before touching the dataset ────────────────────────────
-    train_img_dir   = os.path.join(COCO_ROOT, "train2017")
+    train_img_dir = os.path.join(COCO_ROOT, "val2017")
     val_img_dir     = os.path.join(COCO_ROOT, "val2017")
-    train_ann_file  = os.path.join(COCO_ROOT, "annotations", "instances_train2017.json")
+    train_ann_file = os.path.join(COCO_ROOT, "annotations", "instances_val2017.json")
     val_ann_file    = os.path.join(COCO_ROOT, "annotations", "instances_val2017.json")
 
     _require_path(train_img_dir,  "COCO train images")
