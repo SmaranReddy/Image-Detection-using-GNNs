@@ -7,6 +7,7 @@ from models.detector import HybridDetector
 from dataset.coco_detection import COCODetectionDataset, collate_fn
 from training.train import train_detector
 from utils.seed import set_seed
+from utils.visualize import visualize_predictions
 
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
@@ -105,6 +106,17 @@ def main() -> None:
         device=device,
         checkpoint_dir=CHECKPOINT_DIR,
     )
+
+    # ── Quick visualization after training ────────────────────────────────────
+    print("\nRunning quick visualization...\n")
+
+    checkpoint = torch.load("checkpoints/best.pt", map_location=device)
+    model.load_state_dict(checkpoint["model_state_dict"])
+    model.eval()
+
+    for i in range(3):
+        image, target = val_dataset[i]
+        visualize_predictions(model, image, target, device=device)
 
 
 if __name__ == "__main__":
