@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader
 
 from models.detector import HybridDetector
 from dataset.coco_detection import COCODetectionDataset, collate_fn
+from dataset.coco_detection import DETECTION_CLASSES
 from training.train import train_detector
 from utils.seed import set_seed
 from utils.visualize import visualize_predictions
@@ -110,13 +111,27 @@ def main() -> None:
     # ── Quick visualization after training ────────────────────────────────────
     print("\nRunning quick visualization...\n")
 
-    checkpoint = torch.load("checkpoints/best.pt", map_location=device)
+    checkpoint = torch.load("checkpoints/best.pt", map_location=device, weights_only=True)
     model.load_state_dict(checkpoint["model_state_dict"])
+    model.to(device)
     model.eval()
-
+    
     for i in range(3):
         image, target = val_dataset[i]
-        visualize_predictions(model, image, target, device=device)
+
+        image = image.to(device)
+
+        with torch.no_grad():
+            pred_logits, pred_boxes = model(image.unsqueeze(0))
+
+        visualize_predictions(
+            image=image.cpu(),
+            pred_logits=pred_logits[0].cpu(),
+            pred_boxes=pred_boxes[0].cpu(),
+            gt_boxes=target["boxes"],
+            gt_labels=target["labels"],
+            class_names=DETECTION_CLASSES,
+        )
 
 
 if __name__ == "__main__":
