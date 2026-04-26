@@ -27,6 +27,8 @@ import torch
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
+from utils.causal_caption import extract_top_detections, infer_relationships, generate_causal_caption
+
 
 # ImageNet statistics used during dataset normalization
 _MEAN = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
@@ -179,6 +181,24 @@ def visualize_predictions(
     ]
     ax.legend(handles=legend_handles, loc="upper right", fontsize=9,
               framealpha=0.8, fancybox=False)
+
+    # ── Causal caption ────────────────────────────────────────────────────────
+    detections   = extract_top_detections(pred_logits, pred_boxes, class_names, threshold)
+    relationships = infer_relationships(detections)
+    caption       = generate_causal_caption(detections, relationships)
+
+    fig.text(
+        0.5, -0.02,
+        caption,
+        ha        = "center",
+        va        = "top",
+        fontsize  = 10,
+        wrap      = True,
+        color     = "black",
+        style     = "italic",
+        bbox      = dict(boxstyle="round,pad=0.4", facecolor="lightyellow",
+                         edgecolor="gray", alpha=0.85),
+    )
 
     plt.tight_layout()
 
