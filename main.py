@@ -10,6 +10,9 @@ from dataset.coco_detection import DETECTION_CLASSES
 from training.train import train_detector
 from utils.seed import set_seed
 from utils.visualize import visualize_predictions
+from utils.yolo_detector import load_model, run_inference, format_detections
+from utils.causal_caption import infer_relationships
+from utils.blip_captioner import generate_blip_caption
 
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
@@ -134,7 +137,10 @@ def main() -> None:
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)
     model.eval()
-    
+
+    # Load YOLOv11 once; reuse across all inference calls.
+    yolo_model = load_model()
+
     for i in range(3):
         image, target = test_dataset[i]
 
@@ -151,6 +157,13 @@ def main() -> None:
             gt_labels=target["labels"],
             class_names=DETECTION_CLASSES,
         )
+
+        # YOLO detection → causal caption pipeline.
+        raw        = run_inference(yolo_model, image.cpu())
+        detections = format_detections(raw)
+        relations  = infer_relationships(detections)
+        caption    = generate_blip_caption(image.cpu(), detections, relations)
+        print(f"[image {i}] {caption}")
 
 
 if __name__ == "__main__":
