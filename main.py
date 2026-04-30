@@ -159,6 +159,9 @@ def main() -> None:
         )
 
         # YOLO detection → causal caption pipeline.
+        # To use the learned relation model instead of heuristic rules:
+        #   from relation_prediction import infer_relationships_learned
+        #   relations = infer_relationships_learned(detections)
         raw        = run_inference(yolo_model, image.cpu())
         detections = format_detections(raw)
         relations  = infer_relationships(detections)
