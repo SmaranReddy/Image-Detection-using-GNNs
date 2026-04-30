@@ -4,3 +4,7 @@ numpy
 matplotlib
 Pillow
 tqdm
+transformers 
+accelerate 
+sentencepiece
+ultralytics
