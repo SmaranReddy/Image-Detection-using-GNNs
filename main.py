@@ -3,6 +3,8 @@ import random
 
 import torch
 from torch.utils.data import DataLoader, Subset
+from PIL import Image
+from torchvision import transforms as T
 
 from models.detector import HybridDetector
 from dataset.coco_detection import COCODetectionDataset, collate_fn
@@ -11,8 +13,8 @@ from training.train import train_detector
 from utils.seed import set_seed
 from utils.visualize import visualize_predictions
 from utils.yolo_detector import load_model, run_inference, format_detections
-from utils.causal_caption import infer_relationships
 from utils.blip_captioner import generate_blip_caption
+from relation_prediction.predict import infer_relationships_learned
 
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
@@ -138,6 +140,15 @@ def main() -> None:
     model.to(device)
     model.eval()
 
+    # Helper: convert normalised CHW tensor → PIL RGB (undo ImageNet norm).
+    _mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
+    _std  = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
+
+    def _to_pil(img_t):
+        img = img_t.float().cpu() * _std + _mean
+        img = img.clamp(0, 1)
+        return T.ToPILImage()(img)
+
     # Load YOLOv11 once; reuse across all inference calls.
     yolo_model = load_model()
 
@@ -158,13 +169,13 @@ def main() -> None:
             class_names=DETECTION_CLASSES,
         )
 
-        # YOLO detection → causal caption pipeline.
-        # To use the learned relation model instead of heuristic rules:
-        #   from relation_prediction import infer_relationships_learned
-        #   relations = infer_relationships_learned(detections)
+        # YOLO detection → learned relation prediction → BLIP caption.
         raw        = run_inference(yolo_model, image.cpu())
         detections = format_detections(raw)
-        relations  = infer_relationships(detections)
+        pil_image  = _to_pil(image.cpu())
+        relations  = infer_relationships_learned(
+            detections, image=pil_image,
+        )
         caption    = generate_blip_caption(image.cpu(), detections, relations)
         print(f"[image {i}] {caption}")
 

@@ -44,6 +44,14 @@ def detect_objects(image: Image.Image) -> list:
     return format_detections(raw)
 
 
+def _to_pil(image) -> Image.Image:
+    """Convert torch tensor or PIL to PIL RGB."""
+    if isinstance(image, Image.Image):
+        return image.convert("RGB")
+    from torchvision import transforms as T
+    return T.ToPILImage()(image.float().cpu().clamp(0, 1))
+
+
 # ---------------------------------------------------------------------------
 # Per-image ablation
 # ---------------------------------------------------------------------------
@@ -91,9 +99,13 @@ def run_ablation(image_path: str) -> None:
     # Stage C — BLIP + YOLO + MLP-based learned relationship prediction
     # The MLP was trained on Visual Genome and predicts spatial/semantic
     # predicates from a filtered set of ~16–20 COCO-aligned relation types.
+    # When using a visual-semantic model, the image is passed for CLIP
+    # feature extraction from object crops.
     # ------------------------------------------------------------------
     try:
-        relations = infer_relationships_learned(detections)
+        relations = infer_relationships_learned(
+            detections, image=image,
+        )
         caption_C = generate_blip_caption(image, detections, relations)
     except Exception as exc:
         relations = []
