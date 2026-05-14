@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 import os
-import pickle
+import random
 from collections import Counter, defaultdict
 from typing import Dict, List, Optional, Tuple
 
@@ -25,6 +25,8 @@ from torch.utils.data import Dataset
 from PIL import Image
 
 from .clip_extractor import CLIPExtractor, CLIP_DIM
+from .clip_cache import ClipCache
+from .pose_extractor import PoseExtractor, POSE_FEATURE_DIM
 
 
 # ---------------------------------------------------------------------------
@@ -81,8 +83,7 @@ ALLOWED_PREDICATES: frozenset = frozenset({
 })
 
 PREDICATE_MAP: Dict[str, str] = {
-    "on top of":    "on", "sitting on":   "on",
-    "standing on":  "on", "lying on":     "on",
+    "on top of":    "on", "lying on":     "on",
     "resting on":   "on",
     "next to":      "near", "beside":     "near",
     "close to":     "near",
@@ -115,6 +116,11 @@ def normalize_label(label: str) -> str:
 # ---------------------------------------------------------------------------
 
 GEO_DIM = 5
+MIN_BOX_SIZE = 10  # minimum box dimension (pixels) for meaningful CLIP crops
+
+# Interaction-aware feature dimensions (optional, backward-compatible).
+POSE_FEATURE_DIM  = 20   # compact pose features from PoseExtractor (see pose_extractor.py)
+UNION_FEATURE_DIM = CLIP_DIM  # union-region CLIP embedding, same dim as single crop
 
 
 def _xywh_to_xyxy(x: float, y: float, w: float, h: float) -> Tuple[float, float, float, float]:
@@ -212,30 +218,53 @@ class VGRelationshipDataset(Dataset):
         use_visual: bool = False,
         clip_cache_path: Optional[str] = None,
         force_rebuild_cache: bool = False,
+        require_visual: bool = False,
+        use_pose: bool = False,
+        use_union: bool = False,
     ) -> None:
+        if require_visual and not use_visual:
+            raise ValueError("require_visual=True requires use_visual=True")
+        if use_union and not use_visual:
+            raise ValueError("use_union=True requires use_visual=True")
+        if use_pose and not use_visual:
+            raise ValueError("use_pose=True requires use_visual=True")
+
         self.label_vocab = label_vocab if label_vocab is not None else Vocab()
         self.pred_vocab  = pred_vocab  if pred_vocab  is not None else Vocab()
         self._build_vocab = label_vocab is None
 
         self.vg_image_dir = vg_image_dir
         self.use_visual = use_visual
+        self.require_visual = require_visual
+        self.use_pose = use_pose
+        self.use_union = use_union
         self.clip_extractor: Optional[CLIPExtractor] = None
-        self.clip_cache: Dict[str, torch.Tensor] = {}
+        self.pose_extractor: Optional[PoseExtractor] = None
+        self.clip_cache: ClipCache = ClipCache()
+        self._obj_box_map: Dict[Tuple[int, int], Tuple[float, float, float, float]] = {}
 
         # Load relationship samples with cache keys for visual features.
+        # Also builds self._obj_box_map for CLIP cache construction.
         self.samples, self.sample_keys = self._load(
             relationships_json, image_data_json,
             min_pred_count=min_pred_count,
             max_samples=max_samples,
         )
 
-        # Build or load CLIP cache (needs to know which images/objects
-        # from the relationship data).
+        # Build CLIP cache (uses _obj_box_map populated by _load).
         if use_visual:
             self._init_clip_cache(
-                relationships_json, image_data_json,
                 clip_cache_path, force_rebuild_cache,
             )
+            # Strict visual filtering: exclude any sample with missing CLIP embeddings.
+            if require_visual:
+                self._filter_strict_visual()
+
+        # Interaction-aware feature caches (union-region CLIP, pose features).
+        self.union_feats: List[torch.Tensor] = []
+        self.pose_feats: List[torch.Tensor] = []
+        if use_visual and (use_union or use_pose):
+            self._init_interaction_cache()
 
         # --- dataset inspection logging ---
         stats = self._load_stats
@@ -243,12 +272,13 @@ class VGRelationshipDataset(Dataset):
         kept_before_cap = stats["kept_before_cap"]
         pred_counter    = stats["pred_counter"]
 
-        print(f"\nTotal raw samples:    {total_raw}")
-        print(f"Kept samples:         {kept_before_cap}")
-        print(f"Dropped samples:      {total_raw - kept_before_cap}")
+        print(f"\nTotal raw samples:       {total_raw}")
+        print(f"Kept samples:            {kept_before_cap}")
+        print(f"Dropped samples:         {total_raw - kept_before_cap}")
+        print(f"Skipped (tiny box):      {stats['skipped_small']}")
         if total_raw:
-            print(f"Retention ratio:      {kept_before_cap / total_raw:.2f}")
-        print(f"Total usable samples: {len(self.samples)}")
+            print(f"Retention ratio:         {kept_before_cap / total_raw:.2f}")
+        print(f"Total usable samples:    {len(self.samples)}")
         print(f"\nNumber of unique predicates: {len(pred_counter)}")
         print("Top predicates by frequency:")
         for pred, count in pred_counter.most_common():
@@ -256,6 +286,12 @@ class VGRelationshipDataset(Dataset):
         if use_visual:
             print(f"\nVisual features: ENABLED (CLIP_DIM={CLIP_DIM})")
             print(f"  Cache size: {len(self.clip_cache)} embeddings")
+            if require_visual:
+                print("  Strict visual filtering: ENABLED (require_visual=True)")
+            if use_union:
+                print(f"  Union-region features: ENABLED ({UNION_FEATURE_DIM}-dim CLIP)")
+            if use_pose:
+                print(f"  Pose features: ENABLED ({POSE_FEATURE_DIM}-dim)")
         else:
             print("\nVisual features: DISABLED (geometry-only)")
 
@@ -263,19 +299,18 @@ class VGRelationshipDataset(Dataset):
 
     def _init_clip_cache(
         self,
-        rel_path: str,
-        img_path: str,
         clip_cache_path: Optional[str],
         force_rebuild: bool,
     ) -> None:
         if clip_cache_path is None:
-            clip_cache_path = "clip_cache.pkl"
+            clip_cache_path = "clip_cache.pt"
 
-        if os.path.exists(clip_cache_path) and not force_rebuild:
-            print(f"[VG] Loading CLIP cache from {clip_cache_path} …")
-            with open(clip_cache_path, "rb") as f:
-                self.clip_cache = pickle.load(f)
-            return
+        # Backward compat: load old .pkl format, convert to new on the fly.
+        if not force_rebuild:
+            loaded = self._try_load_cache(clip_cache_path)
+            if loaded is not None:
+                self.clip_cache = loaded
+                return
 
         # Build cache from scratch.
         if self.vg_image_dir is None or not os.path.isdir(self.vg_image_dir):
@@ -285,43 +320,17 @@ class VGRelationshipDataset(Dataset):
                 "  Download VG images and set vg_image_dir, or disable use_visual."
             )
 
-        print(f"[VG] Building CLIP cache from {self.vg_image_dir} …")
-        self.clip_extractor = CLIPExtractor()
-
-        # Collect unique (image_id, object_id) pairs from relationships.
-        with open(img_path) as f:
-            img_meta: List[Dict] = json.load(f)
-
-        with open(rel_path) as f:
-            all_rels: List[Dict] = json.load(f)
-
-        # Map object_id -> box for each image.
-        obj_box_map: Dict[Tuple[int, int], Tuple[float, float, float, float]] = {}
-        for img in all_rels:
-            iid = img.get("image_id")
-            for r in img.get("relationships", []):
-                for role in ("subject", "object"):
-                    ent = r.get(role, {})
-                    oid = ent.get("object_id", -1)
-                    if oid == -1:
-                        continue
-                    box = _xywh_to_xyxy(
-                        ent.get("x", 0), ent.get("y", 0),
-                        ent.get("w", 1), ent.get("h", 1),
-                    )
-                    key = (iid, oid)
-                    if key not in obj_box_map:
-                        obj_box_map[key] = box
-
-        # Group objects by image.
+        # Group objects by image using pre-built _obj_box_map (populated by _load).
         image_to_objects: Dict[int, List[Tuple[int, Tuple]]] = defaultdict(list)
-        for (iid, oid), box in obj_box_map.items():
+        for (iid, oid), box in self._obj_box_map.items():
             image_to_objects[iid].append((oid, box))
 
         n_images = len(image_to_objects)
         print(f"[VG] Extracting CLIP embeddings for {n_images} images …")
+        self.clip_extractor = CLIPExtractor()
 
-        cache: Dict[str, torch.Tensor] = {}
+        keys_list: List[str] = []
+        emb_list: List[torch.Tensor] = []
         for img_idx, (iid, objects) in enumerate(image_to_objects.items()):
             img_path = os.path.join(self.vg_image_dir, f"{iid}.jpg")
             if not os.path.isfile(img_path):
@@ -332,18 +341,266 @@ class VGRelationshipDataset(Dataset):
             embs = self.clip_extractor.extract_crops(pil_img, boxes)
 
             for (oid, _), emb in zip(objects, embs):
-                cache[f"{iid}_obj_{oid}"] = emb
+                keys_list.append(f"{iid}_obj_{oid}")
+                emb_list.append(emb)
 
             if (img_idx + 1) % 1000 == 0:
-                print(f"  [{img_idx + 1}/{n_images}] {len(cache)} embeddings cached")
+                print(f"  [{img_idx + 1}/{n_images}] {len(keys_list)} embeddings cached")
 
-        self.clip_cache = cache
-        print(f"[VG] CLIP cache built: {len(cache)} embeddings")
+        self.clip_cache = ClipCache.build(keys_list, emb_list)
+        print(f"[VG] CLIP cache built: {len(self.clip_cache)} embeddings")
 
-        os.makedirs(os.path.dirname(clip_cache_path) or ".", exist_ok=True)
-        with open(clip_cache_path, "wb") as f:
-            pickle.dump(cache, f)
-        print(f"[VG] CLIP cache saved to {clip_cache_path}")
+        # Ensure .pt extension for new format.
+        save_path = clip_cache_path
+        if save_path.endswith(".pkl"):
+            save_path = save_path.replace(".pkl", ".pt")
+            print(f"[VG] Changing cache extension to .pt: {save_path}")
+        self.clip_cache.save(save_path)
+        print(f"[VG] CLIP cache saved to {save_path}")
+
+    def _try_load_cache(self, path: str) -> Optional[ClipCache]:
+        """Try loading cache, handling both new .pt and legacy .pkl formats.
+
+        Resolution order:
+            1. Exact .pt path
+            2. Same-basename .pt (e.g. user passed .pkl but .pt exists)
+            3. Legacy .pkl → convert to .pt
+        """
+        # 1. Exact .pt path
+        if path.endswith(".pt") and os.path.exists(path):
+            print(f"[VG] Loading CLIP cache from {path} …")
+            return ClipCache.load(path)
+
+        # 2. Same-basename .pt (handles stale .pkl references gracefully)
+        base = path.rsplit(".", 1)[0] if "." in path else path
+        pt_path = base + ".pt"
+        if pt_path != path and os.path.exists(pt_path):
+            print(f"[VG] Loading CLIP cache from {pt_path} …")
+            return ClipCache.load(pt_path)
+
+        # 3. Legacy .pkl — convert on load.
+        legacy_path = base + ".pkl"
+        if legacy_path != path and os.path.exists(legacy_path):
+            print(f"[VG] Converting legacy pickle cache from {legacy_path} …")
+            cache = ClipCache.load_old_pickle(legacy_path)
+            cache.save(pt_path)
+            print(f"[VG] Converted and saved to {pt_path}")
+            return cache
+
+        return None
+
+    # ------------------------------------------------------------------
+    # Strict visual-semantic filtering
+    # ------------------------------------------------------------------
+
+    def _filter_strict_visual(self) -> None:
+        """Remove samples with missing CLIP embeddings.
+
+        Only retains samples where BOTH subject and object CLIP cache
+        entries exist and produce non-zero feature vectors.
+        """
+        total_before = len(self.samples)
+        kept_samples: List = []
+        kept_keys: List[Tuple[str, str]] = []
+        removed = 0
+
+        for sample, (subj_key, obj_key) in zip(self.samples, self.sample_keys):
+            if self._has_valid_clip(subj_key) and self._has_valid_clip(obj_key):
+                kept_samples.append(sample)
+                kept_keys.append((subj_key, obj_key))
+            else:
+                removed += 1
+
+        self.samples = kept_samples
+        self.sample_keys = kept_keys
+        total_after = len(self.samples)
+
+        # Compute post-filter predicate distribution.
+        new_pred_counter: Counter = Counter()
+        for sample in self.samples:
+            new_pred_counter[self.pred_vocab.token(sample[3])] += 1
+
+        # Extract unique VG image IDs from retained sample keys.
+        unique_images: set = set()
+        for _, (subj_key, _) in zip(self.samples, self.sample_keys):
+            if "_obj_" in subj_key:
+                unique_images.add(subj_key.split("_obj_")[0])
+
+        # --- strict filtering report ---
+        print("\n" + "=" * 65)
+        print("  STRICT VISUAL FILTERING REPORT")
+        print("=" * 65)
+        print(f"  Total samples before:      {total_before}")
+        print(f"  Retained samples:          {total_after}")
+        print(f"  Removed samples:           {removed}")
+        if total_before > 0:
+            retained_pct = 100.0 * total_after / total_before
+            removed_pct  = 100.0 * removed / total_before
+            print(f"  % retained:                {retained_pct:.2f}%")
+            print(f"  % removed:                 {removed_pct:.2f}%")
+        print(f"  Unique VG images:          {len(unique_images)}")
+
+        # Verify no zero vectors remain.
+        self._validate_features_nonzero()
+
+        # Predicate distribution after filtering.
+        print(f"\n  Predicate distribution after strict filtering:")
+        for pred, count in new_pred_counter.most_common():
+            print(f"    {pred}: {count}")
+        print("=" * 65 + "\n")
+
+    def _has_valid_clip(self, key: str) -> bool:
+        """Check if a cache key has a non-zero CLIP embedding."""
+        if key not in self.clip_cache:
+            return False
+        emb = self.clip_cache.get(key)
+        if emb is None:
+            return False
+        return emb.norm().item() > 0.0
+
+    def compute_clip_coverage(self) -> tuple:
+        """Compute real CLIP coverage.
+
+        Returns:
+            (real_count, total_count, coverage_pct) for the current dataset.
+            In strict mode, coverage_pct is always 100.0.
+        """
+        if not self.use_visual:
+            return 0, 0, 0.0
+        if self.require_visual:
+            return len(self.samples), len(self.samples), 100.0
+        total = len(self.samples)
+        if total == 0:
+            return 0, 0, 0.0
+        real = 0
+        for sk, ok in self.sample_keys:
+            if sk in self.clip_cache and ok in self.clip_cache:
+                es = self.clip_cache.get(sk)
+                eo = self.clip_cache.get(ok)
+                if es is not None and eo is not None and es.norm().item() > 0.0 and eo.norm().item() > 0.0:
+                    real += 1
+        pct = 100.0 * real / max(total, 1)
+        return real, total, pct
+
+    def _validate_features_nonzero(self) -> None:
+        """Verify ALL retained samples have non-zero CLIP feature norms."""
+        norms_subj: List[float] = []
+        norms_obj: List[float] = []
+        for idx in range(len(self.samples)):
+            subj_key, obj_key = self.sample_keys[idx]
+            subj_feat = self.clip_cache.get(subj_key)
+            obj_feat  = self.clip_cache.get(obj_key)
+            if subj_feat is None:
+                raise RuntimeError(
+                    f"[STRICT VISUAL] Sample {idx}: subj_feat not in cache"
+                )
+            if obj_feat is None:
+                raise RuntimeError(
+                    f"[STRICT VISUAL] Sample {idx}: obj_feat not in cache"
+                )
+            subj_norm = subj_feat.norm().item()
+            obj_norm  = obj_feat.norm().item()
+            if subj_norm == 0.0:
+                raise RuntimeError(
+                    f"[STRICT VISUAL] Sample {idx}: subj_feat is ALL ZERO"
+                )
+            if obj_norm == 0.0:
+                raise RuntimeError(
+                    f"[STRICT VISUAL] Sample {idx}: obj_feat is ALL ZERO"
+                )
+            norms_subj.append(subj_norm)
+            norms_obj.append(obj_norm)
+
+        all_norms = norms_subj + norms_obj
+        mean_norm = sum(all_norms) / len(all_norms)
+        min_norm  = min(all_norms)
+        max_norm  = max(all_norms)
+        print(f"  Feature norm validation:  ALL NON-ZERO ({len(all_norms)} features checked)")
+        print(f"  Mean feature norm:        {mean_norm:.4f}")
+        print(f"  Min feature norm:         {min_norm:.4f}")
+        print(f"  Max feature norm:         {max_norm:.4f}")
+        rng = random.Random(42)
+        sample_idxs = rng.sample(range(len(all_norms)), min(5, len(all_norms)))
+        norms_str = ", ".join(f"{all_norms[i]:.4f}" for i in sample_idxs)
+        print(f"  Random feature norms:     [{norms_str}]")
+
+    # ------------------------------------------------------------------
+    # Interaction-aware feature cache (union-region CLIP + pose)
+    # ------------------------------------------------------------------
+
+    def _init_interaction_cache(self) -> None:
+        from collections import defaultdict
+        n = len(self.samples)
+        self.union_feats = [torch.zeros(UNION_FEATURE_DIM) for _ in range(n)]
+        self.pose_feats = [torch.zeros(POSE_FEATURE_DIM) for _ in range(n)]
+
+        if self.vg_image_dir is None or not os.path.isdir(self.vg_image_dir):
+            print("[VG] Interaction cache: no images dir, using zeros.")
+            return
+
+        if self.use_union and self.clip_extractor is None:
+            self.clip_extractor = CLIPExtractor()
+
+        if self.use_pose:
+            self.pose_extractor = PoseExtractor()
+            if not PoseExtractor.is_available():
+                print("[VG] Pose features requested but MediaPipe not available.")
+                return
+
+        # Group sample indices by image id.
+        image_to_sample_idxs: Dict[str, List[int]] = defaultdict(list)
+        for idx, (subj_key, obj_key) in enumerate(self.sample_keys):
+            if "_obj_" in subj_key:
+                iid = subj_key.split("_obj_")[0]
+                image_to_sample_idxs[iid].append(idx)
+
+        total_imgs = len(image_to_sample_idxs)
+        processed = 0
+        print(f"[VG] Extracting interaction features for {total_imgs} images …")
+
+        for iid, sample_idxs in image_to_sample_idxs.items():
+            img_path = os.path.join(self.vg_image_dir, f"{iid}.jpg")
+            if not os.path.isfile(img_path):
+                continue
+
+            pil_img = Image.open(img_path).convert("RGB")
+            img_id = int(iid)
+
+            for idx in sample_idxs:
+                subj_key, obj_key = self.sample_keys[idx]
+                subj_oid = int(subj_key.split("_obj_")[1])
+                obj_oid = int(obj_key.split("_obj_")[1])
+                subj_box = self._obj_box_map.get((img_id, subj_oid))
+                obj_box = self._obj_box_map.get((img_id, obj_oid))
+                if subj_box is None or obj_box is None:
+                    continue
+
+                # Union-region CLIP embedding.
+                if self.use_union:
+                    union_box = (
+                        min(subj_box[0], obj_box[0]),
+                        min(subj_box[1], obj_box[1]),
+                        max(subj_box[2], obj_box[2]),
+                        max(subj_box[3], obj_box[3]),
+                    )
+                    uemb = self.clip_extractor.extract_crop(pil_img, union_box)
+                    self.union_feats[idx] = uemb.clone()
+
+                # Pose features (only for person subjects).
+                if self.use_pose:
+                    subj_label = self.label_vocab.token(self.samples[idx][0])
+                    if subj_label == "person":
+                        pemb = self.pose_extractor.extract_pose_features(pil_img, subj_box)
+                        if pemb is not None:
+                            self.pose_feats[idx] = pemb.clone()
+
+            processed += 1
+            if processed % 500 == 0:
+                print(f"  [{processed}/{total_imgs}] interaction features cached")
+
+        union_count = sum(1 for f in self.union_feats if f.norm().item() > 0) if self.use_union else 0
+        pose_count = sum(1 for f in self.pose_feats if f.norm().item() > 0) if self.use_pose else 0
+        print(f"[VG] Interaction cache built: {union_count} union, {pose_count} pose features")
 
     # ------------------------------------------------------------------
 
@@ -376,6 +633,7 @@ class VGRelationshipDataset(Dataset):
 
         raw: List[Tuple[str, str, List[float], str, str, str]] = []
         total_raw = 0
+        skipped_small = 0
 
         for img in all_rels:
             iid = img.get("image_id")
@@ -404,6 +662,14 @@ class VGRelationshipDataset(Dataset):
                     obj_d.get("w", 1), obj_d.get("h", 1),
                 )
 
+                # Skip degenerate crops that produce meaningless CLIP embeddings.
+                if (subj_box[2] - subj_box[0]) < MIN_BOX_SIZE or (subj_box[3] - subj_box[1]) < MIN_BOX_SIZE:
+                    skipped_small += 1
+                    continue
+                if (obj_box[2] - obj_box[0]) < MIN_BOX_SIZE or (obj_box[3] - obj_box[1]) < MIN_BOX_SIZE:
+                    skipped_small += 1
+                    continue
+
                 geo = extract_geo_features(subj_box, obj_box, img_w, img_h)
 
                 # Cache keys for visual feature lookup.
@@ -411,6 +677,12 @@ class VGRelationshipDataset(Dataset):
                 obj_oid  = obj_d.get("object_id", -1)
                 subj_key = f"{iid}_obj_{subj_oid}" if subj_oid >= 0 else ""
                 obj_key  = f"{iid}_obj_{obj_oid}"  if obj_oid >= 0 else ""
+
+                # Record valid object boxes for CLIP cache construction.
+                if subj_oid >= 0:
+                    self._obj_box_map[(iid, subj_oid)] = subj_box
+                if obj_oid >= 0:
+                    self._obj_box_map[(iid, obj_oid)] = obj_box
 
                 raw.append((subj_name, obj_name, geo, pred, subj_key, obj_key))
 
@@ -427,6 +699,7 @@ class VGRelationshipDataset(Dataset):
         self._load_stats = {
             "total_raw":       total_raw,
             "kept_before_cap": kept_before_cap,
+            "skipped_small":   skipped_small,
             "pred_counter":    Counter(r[3] for r in raw),
         }
 
@@ -460,9 +733,32 @@ class VGRelationshipDataset(Dataset):
 
         if self.use_visual:
             subj_key, obj_key = self.sample_keys[idx]
-            subj_feat = self.clip_cache.get(subj_key, torch.zeros(CLIP_DIM))
-            obj_feat  = self.clip_cache.get(obj_key,  torch.zeros(CLIP_DIM))
+            if self.require_visual:
+                subj_feat = self.clip_cache.get(subj_key)
+                obj_feat = self.clip_cache.get(obj_key)
+                if subj_feat is None or obj_feat is None:
+                    raise RuntimeError(
+                        f"[STRICT VISUAL] Sample {idx}: missing CLIP embedding. "
+                        f"subj_key={subj_key}, obj_key={obj_key}. "
+                        "All samples should have valid CLIP features in strict mode."
+                    )
+                if subj_feat.norm().item() == 0.0 or obj_feat.norm().item() == 0.0:
+                    raise RuntimeError(
+                        f"[STRICT VISUAL] Sample {idx}: zero CLIP embedding detected. "
+                        "All samples must have non-zero CLIP features in strict mode."
+                    )
+            else:
+                subj_feat = self.clip_cache.get(subj_key, torch.zeros(CLIP_DIM))
+                obj_feat = self.clip_cache.get(obj_key, torch.zeros(CLIP_DIM))
             result = result + (subj_feat.clone(), obj_feat.clone())
+
+            if self.use_union:
+                uf = self.union_feats[idx] if idx < len(self.union_feats) else torch.zeros(UNION_FEATURE_DIM)
+                result = result + (uf.clone(),)
+
+            if self.use_pose:
+                pf = self.pose_feats[idx] if idx < len(self.pose_feats) else torch.zeros(POSE_FEATURE_DIM)
+                result = result + (pf.clone(),)
 
         return result
 

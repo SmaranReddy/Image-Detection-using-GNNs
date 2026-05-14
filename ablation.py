@@ -38,10 +38,12 @@ def _ensure_yolo() -> None:
 
 
 def detect_objects(image: Image.Image) -> list:
-    """Run YOLOv11 on *image* and return formatted COCO detections."""
+    """Run YOLOv11 on *image* and return CLIP-verified COCO detections."""
     _ensure_yolo()
     raw = run_inference(_yolo_model, image)
-    return format_detections(raw)
+    detections = format_detections(raw)
+    from utils.detection_verifier import verify_detections
+    return verify_detections(detections, image, debug=False)
 
 
 def _to_pil(image) -> Image.Image:

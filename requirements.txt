@@ -8,3 +8,5 @@ transformers
 accelerate 
 sentencepiece
 ultralytics
+nltk
+mediapipe==0.10.14

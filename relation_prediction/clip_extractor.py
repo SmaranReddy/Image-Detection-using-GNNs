@@ -99,6 +99,35 @@ class CLIPExtractor:
         embs = outputs.pooler_output  # (num_boxes, CLIP_DIM)
         return F.normalize(embs, dim=-1).cpu()
 
+    @torch.no_grad()
+    def extract_union_embedding(
+        self,
+        image: Image.Image,
+        box_a: Tuple[float, float, float, float],
+        box_b: Tuple[float, float, float, float],
+    ) -> torch.Tensor:
+        """
+        Extract CLIP embedding for the union region covering two boxes.
+
+        The union region captures interaction context between two objects
+        (e.g. contact, posture, support relationships) that isolated crops miss.
+
+        Args:
+            image: Full PIL image (RGB).
+            box_a: First bounding box (x1, y1, x2, y2) in pixel coordinates.
+            box_b: Second bounding box (x1, y1, x2, y2) in pixel coordinates.
+
+        Returns:
+            Tensor (CLIP_DIM,) — L2-normalised CLIP visual embedding.
+        """
+        union_box = (
+            min(box_a[0], box_b[0]),
+            min(box_a[1], box_b[1]),
+            max(box_a[2], box_b[2]),
+            max(box_a[3], box_b[3]),
+        )
+        return self.extract_crop(image, union_box)
+
     @classmethod
     def to_embedding_key(
         cls, image_id: int, object_id: Optional[int] = None, box: Optional[Tuple] = None

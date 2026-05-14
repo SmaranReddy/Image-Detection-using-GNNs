@@ -27,7 +27,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
 
 from .model import RelationMLP
-from .vg_dataset import VGRelationshipDataset, Vocab, GEO_DIM
+from .vg_dataset import VGRelationshipDataset, Vocab, GEO_DIM, POSE_FEATURE_DIM, UNION_FEATURE_DIM
 
 
 # ---------------------------------------------------------------------------
@@ -48,9 +48,12 @@ DROPOUT        = 0.3
 MIN_PRED_COUNT = 50
 MAX_SAMPLES    = None
 SEED           = 42
-USE_VISUAL     = False
-VG_IMAGE_DIR   = None
+USE_VISUAL      = False
+REQUIRE_VISUAL  = False
+VG_IMAGE_DIR    = None
 CLIP_CACHE_PATH = None
+USE_POSE        = False
+USE_UNION       = False
 
 
 # ---------------------------------------------------------------------------
@@ -73,8 +76,11 @@ def train_relation_model(
     seed: int = SEED,
     device: Optional[torch.device] = None,
     use_visual: bool = USE_VISUAL,
+    require_visual: bool = REQUIRE_VISUAL,
     vg_image_dir: Optional[str] = VG_IMAGE_DIR,
     clip_cache_path: Optional[str] = CLIP_CACHE_PATH,
+    use_pose: bool = USE_POSE,
+    use_union: bool = USE_UNION,
 ) -> RelationMLP:
     torch.manual_seed(seed)
     random.seed(seed)
@@ -82,7 +88,19 @@ def train_relation_model(
     if device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[relation_prediction] device: {device}")
-    print(f"[relation_prediction] mode: {'visual-semantic' if use_visual else 'geometry-only'}")
+    mode_parts = []
+    if use_visual:
+        mode_parts.append('visual-semantic')
+        if require_visual:
+            mode_parts.append('strict')
+    else:
+        mode_parts.append('geometry-only')
+    if use_pose:
+        mode_parts.append('pose')
+    if use_union:
+        mode_parts.append('union')
+    mode_str = '+'.join(mode_parts) if mode_parts else 'geometry-only'
+    print(f"[relation_prediction] mode: {mode_str}")
 
     rel_json = os.path.join(vg_root, "relationships.json")
     img_json = os.path.join(vg_root, "image_data.json")
@@ -105,6 +123,9 @@ def train_relation_model(
         max_samples=max_samples,
         use_visual=use_visual,
         clip_cache_path=clip_cache_path,
+        require_visual=require_visual,
+        use_pose=use_pose,
+        use_union=use_union,
     )
     label_vocab = full_ds.label_vocab
     pred_vocab  = full_ds.pred_vocab
@@ -112,6 +133,45 @@ def train_relation_model(
     print(f"  samples      : {len(full_ds):,}")
     print(f"  label vocab  : {len(label_vocab):,}")
     print(f"  pred vocab   : {len(pred_vocab):,}")
+
+    # Pre-training validation: verify dataset purity
+    if use_visual:
+        real, total, coverage_pct = full_ds.compute_clip_coverage()
+        print(f"\n  [CLIP COVERAGE] Real: {real:,} / {total:,} = {coverage_pct:.2f}%")
+        if require_visual:
+            assert coverage_pct == 100.0, (
+                f"[PURE VISUAL] Coverage is {coverage_pct:.2f}%, expected 100%. "
+                "Strict mode filtering failed."
+            )
+            # Full zero-vector audit
+            zero_count = 0
+            subj_norms, obj_norms = [], []
+            for idx in range(total):
+                item = full_ds[idx]
+                sn = item[4].norm().item()
+                on = item[5].norm().item()
+                subj_norms.append(sn)
+                obj_norms.append(on)
+                if sn < 0.001 or on < 0.001:
+                    zero_count += 1
+            assert zero_count == 0, (
+                f"[PURE VISUAL] {zero_count} zero-vector features detected!"
+            )
+            all_norms = subj_norms + obj_norms
+            mean_n = sum(all_norms) / len(all_norms)
+            min_n = min(all_norms)
+            max_n = max(all_norms)
+            print(f"  [VALIDATION] Zero-vector features: 0/{total * 2} — PASS")
+            print(f"  [NORM CHECK] Mean {mean_n:.4f}, Min {min_n:.4f}, Max {max_n:.4f}")
+            # Predicate distribution
+            from collections import Counter
+            pred_counter = Counter()
+            for idx in range(total):
+                pred_name = full_ds.pred_vocab.token(full_ds[idx][3].item())
+                pred_counter[pred_name] += 1
+            print(f"  [PRED DIST] Retained predicate distribution:")
+            for pred, count in pred_counter.most_common():
+                print(f"    {pred}: {count}")
 
     n_val   = max(1, int(len(full_ds) * val_fraction))
     n_train = len(full_ds) - n_val
@@ -121,18 +181,24 @@ def train_relation_model(
     )
 
     def _collate(batch):
-        """Collate function that handles optional visual features."""
+        """Collate function that handles optional visual, union, and pose features."""
         subj_idxs, obj_idxs, geos, preds = [], [], [], []
         subj_feats, obj_feats = [], []
+        union_feats, pose_feats = [], []
 
         for item in batch:
             subj_idxs.append(item[0])
             obj_idxs.append(item[1])
             geos.append(item[2])
             preds.append(item[3])
-            if len(item) > 4:
-                subj_feats.append(item[4])
-                obj_feats.append(item[5])
+            idx = 4
+            if use_visual:
+                subj_feats.append(item[idx]); obj_feats.append(item[idx + 1])
+                idx += 2
+                if use_union:
+                    union_feats.append(item[idx]); idx += 1
+                if use_pose:
+                    pose_feats.append(item[idx]); idx += 1
 
         result = (
             torch.stack(subj_idxs),
@@ -142,6 +208,10 @@ def train_relation_model(
         )
         if subj_feats:
             result = result + (torch.stack(subj_feats), torch.stack(obj_feats))
+        if union_feats:
+            result = result + (torch.stack(union_feats),)
+        if pose_feats:
+            result = result + (torch.stack(pose_feats),)
         return result
 
     train_loader = DataLoader(
@@ -157,6 +227,8 @@ def train_relation_model(
 
     # --- Model ---------------------------------------------------------
     clip_dim = full_ds.CLIP_DIM if use_visual else 0
+    pose_dim = POSE_FEATURE_DIM if use_pose else 0
+    union_dim = UNION_FEATURE_DIM if use_union else 0
     model = RelationMLP(
         num_labels=len(label_vocab),
         num_predicates=len(pred_vocab),
@@ -164,9 +236,11 @@ def train_relation_model(
         hidden_dims=hidden_dims,
         dropout=dropout,
         clip_dim=clip_dim,
+        pose_dim=pose_dim,
+        union_dim=union_dim,
     ).to(device)
 
-    input_dim = 2 * embed_dim + GEO_DIM + 2 * clip_dim
+    input_dim = 2 * embed_dim + GEO_DIM + 2 * clip_dim + union_dim + pose_dim
     print(f"  input dim    : {input_dim}")
     print(f"  parameters   : {sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
 
@@ -179,6 +253,8 @@ def train_relation_model(
 
     # --- Epoch loop ----------------------------------------------------
     has_visual = use_visual
+    has_union = use_union
+    has_pose = use_pose
 
     for epoch in range(1, epochs + 1):
         model.train()
@@ -194,12 +270,17 @@ def train_relation_model(
 
             optimizer.zero_grad()
 
-            if has_visual:
-                subj_feat = batch[4].to(device)
-                obj_feat  = batch[5].to(device)
-                logits = model(subj, obj, geo, subj_feat, obj_feat)
-            else:
-                logits = model(subj, obj, geo)
+            idx = 4
+            subj_feat = batch[idx].to(device) if has_visual else None
+            obj_feat  = batch[idx + 1].to(device) if has_visual else None
+            idx += 2 if has_visual else 0
+            union_feat = batch[idx].to(device) if has_union else None
+            idx += 1 if has_union else 0
+            pose_feat  = batch[idx].to(device) if has_pose else None
+
+            logits = model(subj, obj, geo,
+                           subj_feat=subj_feat, obj_feat=obj_feat,
+                           union_feat=union_feat, pose_feat=pose_feat)
 
             loss = criterion(logits, pred)
             loss.backward()
@@ -224,12 +305,17 @@ def train_relation_model(
                 geo  = batch[2].to(device)
                 pred = batch[3].to(device)
 
-                if has_visual:
-                    subj_feat = batch[4].to(device)
-                    obj_feat  = batch[5].to(device)
-                    logits = model(subj, obj, geo, subj_feat, obj_feat)
-                else:
-                    logits = model(subj, obj, geo)
+                idx = 4
+                subj_feat = batch[idx].to(device) if has_visual else None
+                obj_feat  = batch[idx + 1].to(device) if has_visual else None
+                idx += 2 if has_visual else 0
+                union_feat = batch[idx].to(device) if has_union else None
+                idx += 1 if has_union else 0
+                pose_feat  = batch[idx].to(device) if has_pose else None
+
+                logits = model(subj, obj, geo,
+                               subj_feat=subj_feat, obj_feat=obj_feat,
+                               union_feat=union_feat, pose_feat=pose_feat)
 
                 preds  = logits.argmax(dim=-1)
                 val_correct += (preds == pred).sum().item()
@@ -248,17 +334,77 @@ def train_relation_model(
 
         if val_acc > best_val_acc:
             best_val_acc = val_acc
-            _save(model, label_vocab, pred_vocab, checkpoint_dir)
+            _save(model, label_vocab, pred_vocab, checkpoint_dir,
+                  dataset=full_ds, mode_label=mode_str,
+                  use_visual=use_visual, require_visual=require_visual)
             print(f"    -> saved (val acc {best_val_acc:.3f})")
 
     print(f"[relation_prediction] Training done. Best val acc: {best_val_acc:.3f}")
     return model
 
 
-def _save(model, label_vocab, pred_vocab, ckpt_dir):
-    torch.save(model.state_dict(), os.path.join(ckpt_dir, "relation_mlp.pt"))
+def _save(model, label_vocab, pred_vocab, ckpt_dir, dataset=None, mode_label="unknown",
+          use_visual=False, require_visual=False):
+    # Save model state dict + architecture config for forward-compatible loading.
+    state = model.state_dict()
+    config = {
+        "num_labels": model.label_emb.num_embeddings,
+        "num_predicates": model.mlp[-1].out_features,
+        "embed_dim": model.label_emb.embedding_dim,
+        "clip_dim": model.clip_dim,
+        "pose_dim": model.pose_dim,
+        "union_dim": model.union_dim,
+    }
+    # Infer hidden_dims from state dict — iterate over mlp.{i}.weight
+    # keys (skipping the final output layer) using the same stepped
+    # indexing that _infer_hidden_dims in predict.py uses.
+    hdims = []
+    idx = 0
+    while True:
+        key = f"mlp.{idx}.weight"
+        if key not in state:
+            break
+        hdims.append(state[key].shape[0])
+        idx += 3
+    config["hidden_dims"] = hdims[:-1]  # exclude the output layer
+    torch.save({"model_state_dict": state, "model_config": config},
+               os.path.join(ckpt_dir, "relation_mlp.pt"))
     label_vocab.save(os.path.join(ckpt_dir, "label_vocab.json"))
     pred_vocab.save(os.path.join(ckpt_dir, "pred_vocab.json"))
+
+    import time, json
+    from collections import Counter
+    meta = {
+        "timestamp": time.time(),
+        "mode": mode_label,
+        "use_visual": use_visual,
+        "require_visual": require_visual,
+        "batch_size": BATCH_SIZE,
+        "epochs": EPOCHS,
+        "lr": LR,
+        "embed_dim": EMBED_DIM,
+        "hidden_dims": list(HIDDEN_DIMS),
+        "dropout": DROPOUT,
+        "seed": SEED,
+    }
+    if dataset is not None:
+        meta["dataset_size"] = len(dataset)
+        meta["num_labels"] = len(dataset.label_vocab)
+        meta["num_predicates"] = len(dataset.pred_vocab)
+        # Real CLIP coverage
+        if use_visual:
+            real, total, pct = dataset.compute_clip_coverage()
+            meta["real_clip_coverage_pct"] = round(pct, 2)
+            meta["real_clip_samples"] = real
+            meta["total_samples"] = total
+        # Retained sample count (= dataset size in pure visual, total in mixed)
+        meta["retained_sample_count"] = len(dataset)
+        pred_counter = Counter()
+        for idx in range(len(dataset)):
+            pred_counter[dataset.pred_vocab.token(dataset[idx][3].item())] += 1
+        meta["predicate_distribution"] = dict(pred_counter.most_common())
+    with open(os.path.join(ckpt_dir, "training_meta.json"), "w") as f:
+        json.dump(meta, f, indent=2)
 
 
 # ---------------------------------------------------------------------------
@@ -278,10 +424,16 @@ if __name__ == "__main__":
     parser.add_argument("--min-pred-count", type=int,   default=MIN_PRED_COUNT)
     parser.add_argument("--use-visual",     action="store_true",  default=False,
                         help="Enable CLIP visual features")
+    parser.add_argument("--require-visual", action="store_true",  default=False,
+                        help="Strict: drop samples with missing CLIP embeddings")
     parser.add_argument("--vg-image-dir",   type=str,   default=None,
                         help="Directory with VG images (e.g. ./data/visual_genome/images)")
     parser.add_argument("--clip-cache-path", type=str,  default=None,
                         help="Path to CLIP embedding cache (.pkl)")
+    parser.add_argument("--use-pose",  action="store_true", default=False,
+                        help="Enable pose features (requires MediaPipe)")
+    parser.add_argument("--use-union", action="store_true", default=False,
+                        help="Enable union-region CLIP features")
     args = parser.parse_args()
 
     train_relation_model(
@@ -293,6 +445,9 @@ if __name__ == "__main__":
         max_samples=args.max_samples,
         min_pred_count=args.min_pred_count,
         use_visual=args.use_visual,
+        require_visual=args.require_visual,
         vg_image_dir=args.vg_image_dir,
         clip_cache_path=args.clip_cache_path,
+        use_pose=args.use_pose,
+        use_union=args.use_union,
     )
