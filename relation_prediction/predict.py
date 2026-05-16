@@ -32,6 +32,7 @@ import torch.nn.functional as F
 from PIL import Image
 
 from .model import RelationMLP
+from .relation_transformer import RelationTransformer
 from .vg_dataset import (
     ALLOWED_PREDICATES,
     Vocab,
@@ -380,16 +381,19 @@ def _check_hard_negative(subject: str, predicate: str, object: str) -> bool:
 # Step 4 — Feature contribution analysis utilities
 # ---------------------------------------------------------------------------
 
-def _get_feature_group_norms(model: RelationMLP) -> Dict[str, float]:
-    """Analyze feature group contributions in the first MLP layer.
+def _get_feature_group_norms(model: nn.Module) -> Dict[str, float]:
+    """Analyze feature group contributions.
 
-    The first layer weight has shape (hidden_dim, in_dim) where in_dim is:
-        [subj_label_emb | obj_label_emb | geo | subj_clip | obj_clip |
-         union_clip* | pose*]
+    For MLP: L2 norm of first-layer weight columns per feature group.
+    For Transformer: cross-attention weight aggregation per modality.
 
     Returns:
-        Dict mapping group name to L2 norm of corresponding weight columns.
+        Dict mapping group name to contribution score.
     """
+    if isinstance(model, RelationTransformer):
+        return _get_transformer_feature_norms(model)
+
+    # MLP path
     first_weight = model.mlp[0].weight  # (H, in_dim)
     embed_dim = model.label_emb.weight.shape[1]
     clip_dim = model.clip_dim
@@ -421,8 +425,31 @@ def _get_feature_group_norms(model: RelationMLP) -> Dict[str, float]:
     return norms
 
 
+def _get_transformer_feature_norms(model: RelationTransformer) -> Dict[str, float]:
+    """Estimate feature importance via projection weight norms.
+
+    For the transformer, each modality has a linear projection layer.
+    We use the L2 norm of each projection's weight as a proxy for
+    how much information flows through that modality.
+
+    This mirrors the MLP approach structurally.
+    """
+    norms = {}
+    norms["subj_label"] = model.subj_label_proj.weight.norm().item()
+    norms["obj_label"] = model.obj_label_proj.weight.norm().item()
+    norms["geo"] = model.geo_proj.weight.norm().item()
+    if hasattr(model, 'subj_clip_proj'):
+        norms["subj_clip"] = model.subj_clip_proj.weight.norm().item()
+        norms["obj_clip"] = model.obj_clip_proj.weight.norm().item()
+    if hasattr(model, 'union_proj'):
+        norms["union_clip"] = model.union_proj.weight.norm().item()
+    if hasattr(model, 'pose_proj'):
+        norms["pose"] = model.pose_proj.weight.norm().item()
+    return norms
+
+
 def _measure_feature_ablation(
-    model: RelationMLP,
+    model: nn.Module,
     subj_idx: torch.Tensor,
     obj_idx: torch.Tensor,
     geo: torch.Tensor,
@@ -524,7 +551,7 @@ def _measure_feature_ablation(
 
 
 def _analyze_feature_utilization(
-    model: RelationMLP,
+    model: nn.Module,
     subj_idx: torch.Tensor,
     obj_idx: torch.Tensor,
     geo: torch.Tensor,
@@ -743,22 +770,23 @@ def evaluate_relation_quality(
 # Singleton state
 # ---------------------------------------------------------------------------
 
-_model:         Optional[RelationMLP] = None
-_label_vocab:   Optional[Vocab]       = None
-_pred_vocab:    Optional[Vocab]       = None
+_model:         Optional[nn.Module] = None
+_label_vocab:   Optional[Vocab]      = None
+_pred_vocab:    Optional[Vocab]      = None
 _device:        Optional[torch.device] = None
 _clip_model:    Optional[CLIPExtractor] = None
 _pose_model:    Optional[PoseExtractor] = None
 _model_clip_dim: int = 0
 _model_pose_dim: int = 0
 _model_union_dim: int = 0
+_model_type:     str = "mlp"
 
 _DEFAULT_CKPT_DIR = os.environ.get("REL_CKPT_DIR", "./checkpoints")
 
 
 def load_relation_model(checkpoint_dir: str = _DEFAULT_CKPT_DIR) -> None:
     global _model, _label_vocab, _pred_vocab, _device, _model_clip_dim
-    global _model_pose_dim, _model_union_dim
+    global _model_pose_dim, _model_union_dim, _model_type
 
     model_path = os.path.join(checkpoint_dir, "relation_mlp.pt")
     lv_path    = os.path.join(checkpoint_dir, "label_vocab.json")
@@ -780,62 +808,109 @@ def load_relation_model(checkpoint_dir: str = _DEFAULT_CKPT_DIR) -> None:
 
     raw_data = torch.load(model_path, map_location=_device, weights_only=True)
 
-    # Support both new format (with config) and old format (bare state_dict).
-    if isinstance(raw_data, dict) and "model_state_dict" in raw_data:
-        state = raw_data["model_state_dict"]
+    # Determine model type from config or infer from state_dict keys.
+    if isinstance(raw_data, dict) and "model_config" in raw_data:
         config = raw_data.get("model_config", {})
+        model_type = config.get("model_type", "mlp")
+    else:
+        model_type = "mlp"
+
+    if model_type == "transformer":
+        state = raw_data["model_state_dict"]
+        clip_dim = config.get("clip_dim", 0)
         pose_dim = config.get("pose_dim", 0)
         union_dim = config.get("union_dim", 0)
-        clip_dim = config.get("clip_dim", 0)
-        embed_dim = config.get("embed_dim", state["label_emb.weight"].shape[1])
-        # Infer hidden_dims from actual state_dict weights — this is always
-        # correct regardless of what was saved in model_config.
-        hidden_dims = _infer_hidden_dims(state)
+        embed_dim = config.get("embed_dim", 64)
+        d_model = config.get("d_model", 256)
+
+        _model_clip_dim = clip_dim
+        _model_pose_dim = pose_dim
+        _model_union_dim = union_dim
+        _model_type = "transformer"
+
+        _model = RelationTransformer(
+            num_labels=len(_label_vocab),
+            num_predicates=len(_pred_vocab),
+            d_model=d_model,
+            embed_dim=embed_dim,
+            clip_dim=clip_dim,
+            pose_dim=pose_dim,
+            union_dim=union_dim,
+        )
+        _model.load_state_dict(state)
+        _model.to(_device)
+        _model.eval()
+
+        mode_parts = []
+        if clip_dim > 0:
+            mode_parts.append("visual-semantic")
+        if union_dim > 0:
+            mode_parts.append("union")
+        if pose_dim > 0:
+            mode_parts.append("pose")
+        mode_str = "+".join(mode_parts) if mode_parts else "geometry-only"
+        print(
+            f"[relation_prediction] Loaded TRANSFORMER model from {checkpoint_dir} "
+            f"({len(_label_vocab):,} labels, {len(_pred_vocab):,} predicates, "
+            f"{mode_str}, d_model={d_model})"
+        )
+
     else:
-        state = raw_data
-        embed_dim = state["label_emb.weight"].shape[1]
-        hidden_dims = _infer_hidden_dims(state)
-        clip_dim = _infer_clip_dim(state, embed_dim)
-        pose_dim = 0
-        union_dim = 0
+        # Support both new format (with config) and old format (bare state_dict).
+        if isinstance(raw_data, dict) and "model_state_dict" in raw_data:
+            state = raw_data["model_state_dict"]
+            config = raw_data.get("model_config", {})
+            pose_dim = config.get("pose_dim", 0)
+            union_dim = config.get("union_dim", 0)
+            clip_dim = config.get("clip_dim", 0)
+            embed_dim = config.get("embed_dim", state["label_emb.weight"].shape[1])
+            hidden_dims = _infer_hidden_dims(state)
+        else:
+            state = raw_data
+            embed_dim = state["label_emb.weight"].shape[1]
+            hidden_dims = _infer_hidden_dims(state)
+            clip_dim = _infer_clip_dim(state, embed_dim)
+            pose_dim = 0
+            union_dim = 0
 
-    _model_clip_dim = clip_dim
-    _model_pose_dim = pose_dim
-    _model_union_dim = union_dim
+        _model_clip_dim = clip_dim
+        _model_pose_dim = pose_dim
+        _model_union_dim = union_dim
+        _model_type = "mlp"
 
-    _model = RelationMLP(
-        num_labels=len(_label_vocab),
-        num_predicates=len(_pred_vocab),
-        embed_dim=embed_dim,
-        hidden_dims=hidden_dims,
-        clip_dim=clip_dim,
-        pose_dim=pose_dim,
-        union_dim=union_dim,
-    )
-    _model.load_state_dict(state)
-    _model.to(_device)
-    _model.eval()
+        _model = RelationMLP(
+            num_labels=len(_label_vocab),
+            num_predicates=len(_pred_vocab),
+            embed_dim=embed_dim,
+            hidden_dims=hidden_dims,
+            clip_dim=clip_dim,
+            pose_dim=pose_dim,
+            union_dim=union_dim,
+        )
+        _model.load_state_dict(state)
+        _model.to(_device)
+        _model.eval()
 
-    input_dim = 2 * embed_dim + GEO_DIM + 2 * clip_dim + union_dim + pose_dim
-    mode_parts = []
-    if clip_dim > 0:
-        mode_parts.append("visual-semantic")
-    if union_dim > 0:
-        mode_parts.append("union")
-    if pose_dim > 0:
-        mode_parts.append("pose")
-    mode_str = "+".join(mode_parts) if mode_parts else "geometry-only"
-    print(
-        f"[relation_prediction] Loaded model from {checkpoint_dir} "
-        f"({len(_label_vocab):,} labels, {len(_pred_vocab):,} predicates, "
-        f"{mode_str}, input_dim={input_dim})"
-    )
-    print(f"[RelationMLP]")
-    print(f"  Loaded config:")
-    print(f"    input_dim={input_dim}")
-    print(f"    hidden_dims={hidden_dims}")
-    print(f"    pose_dim={pose_dim}")
-    print(f"    union_dim={union_dim}")
+        input_dim = 2 * embed_dim + GEO_DIM + 2 * clip_dim + union_dim + pose_dim
+        mode_parts = []
+        if clip_dim > 0:
+            mode_parts.append("visual-semantic")
+        if union_dim > 0:
+            mode_parts.append("union")
+        if pose_dim > 0:
+            mode_parts.append("pose")
+        mode_str = "+".join(mode_parts) if mode_parts else "geometry-only"
+        print(
+            f"[relation_prediction] Loaded model from {checkpoint_dir} "
+            f"({len(_label_vocab):,} labels, {len(_pred_vocab):,} predicates, "
+            f"{mode_str}, input_dim={input_dim})"
+        )
+        print(f"[RelationMLP]")
+        print(f"  Loaded config:")
+        print(f"    input_dim={input_dim}")
+        print(f"    hidden_dims={hidden_dims}")
+        print(f"    pose_dim={pose_dim}")
+        print(f"    union_dim={union_dim}")
 
 
 def _infer_hidden_dims(state: dict) -> Tuple[int, ...]:
@@ -1895,7 +1970,8 @@ def infer_relationships_semantic(
             try:
                 feature_norms = _get_feature_group_norms(_model)
                 total_fn = sum(feature_norms.values()) or 1.0
-                print(f"\n  ─── FEATURE GROUP NORMS (first layer) ───")
+                header = "FEATURE GROUP NORMS (projection weights)" if _model_type == "transformer" else "FEATURE GROUP NORMS (first layer)"
+                print(f"\n  ─── {header} ───")
                 for name, norm in sorted(feature_norms.items(), key=lambda x: -x[1]):
                     pct = norm / total_fn * 100
                     print(f"    {name:15s}: {norm:8.4f}  ({pct:5.1f}%)")
@@ -1916,6 +1992,23 @@ def infer_relationships_semantic(
                 print(f"    Geometry:          {geo_pct:5.1f}%  "
                       f"{'(dominant)' if geo_pct > 15 else '(controlled)'}")
                 print(f"    Label embeddings:  {label_pct:5.1f}%")
+
+                # For transformer, also show attention-based modality usage
+                if _model_type == "transformer":
+                    try:
+                        attn_contribs = _model.get_feature_contributions(
+                            torch.tensor([0], device=_device),
+                            torch.tensor([0], device=_device),
+                            torch.zeros((1, GEO_DIM), device=_device),
+                        )
+                        if attn_contribs:
+                            total_attn = sum(attn_contribs.values()) or 1.0
+                            print(f"\n  ─── ATTENTION-BASED MODALITY USAGE ───")
+                            for name, val in sorted(attn_contribs.items(), key=lambda x: -x[1]):
+                                pct = val / total_attn * 100
+                                print(f"    {name:15s}: {pct:5.1f}%")
+                    except Exception as e2:
+                        print(f"  [attention analysis] ({e2})")
             except Exception as e:
                 print(f"  [feature analysis] Skipped ({e})")
 

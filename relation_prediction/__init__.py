@@ -19,5 +19,6 @@ from .predict import (
     _get_feature_group_norms,
 )
 from .model import RelationMLP
+from .relation_transformer import RelationTransformer
 from .vg_dataset import VGRelationshipDataset, Vocab, GEO_DIM
 from .clip_extractor import CLIPExtractor, CLIP_DIM

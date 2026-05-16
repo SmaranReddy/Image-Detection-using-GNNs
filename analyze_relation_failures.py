@@ -38,6 +38,7 @@ PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, PROJECT_ROOT)
 
 from relation_prediction.model import RelationMLP
+from relation_prediction.relation_transformer import RelationTransformer
 from relation_prediction.vg_dataset import (
     ALLOWED_PREDICATES,
     GEO_DIM,
@@ -187,7 +188,21 @@ def compute_prior_adjustment(subject: str, predicate: str, object: str) -> float
 # Feature group norms extraction
 # ---------------------------------------------------------------------------
 
-def get_feature_group_norms(model: RelationMLP) -> Dict[str, float]:
+def get_feature_group_norms(model: nn.Module) -> Dict[str, float]:
+    if isinstance(model, RelationTransformer):
+        norms = {}
+        norms["subj_label_emb"] = model.subj_label_proj.weight.norm().item()
+        norms["obj_label_emb"] = model.obj_label_proj.weight.norm().item()
+        norms["geometry"] = model.geo_proj.weight.norm().item()
+        if hasattr(model, 'subj_clip_proj'):
+            norms["subj_clip"] = model.subj_clip_proj.weight.norm().item()
+            norms["obj_clip"] = model.obj_clip_proj.weight.norm().item()
+        if hasattr(model, 'union_proj'):
+            norms["union_clip"] = model.union_proj.weight.norm().item()
+        if hasattr(model, 'pose_proj'):
+            norms["pose"] = model.pose_proj.weight.norm().item()
+        return norms
+
     first_weight = model.mlp[0].weight
     embed_dim = model.label_emb.weight.shape[1]
     clip_dim = model.clip_dim
@@ -246,7 +261,7 @@ def compute_feature_contribution_percentages(norms: Dict[str, float]) -> Dict[st
 # ---------------------------------------------------------------------------
 
 def analyze_ablation(
-    model: RelationMLP,
+    model: nn.Module,
     subj_idx: torch.Tensor,
     obj_idx: torch.Tensor,
     geo: torch.Tensor,
@@ -331,44 +346,60 @@ def analyze_relation_failures(
     if isinstance(raw_data, dict) and "model_state_dict" in raw_data:
         state = raw_data["model_state_dict"]
         config = raw_data.get("model_config", {})
+        model_type = config.get("model_type", "mlp")
         pose_dim = config.get("pose_dim", 0)
         union_dim = config.get("union_dim", 0)
         clip_dim = config.get("clip_dim", 0)
         embed_dim = config.get("embed_dim", state["label_emb.weight"].shape[1])
 
-        # Infer hidden dims from state dict weights (more reliable than config)
-        hidden_list: List[int] = []
-        idx = 0
-        while True:
-            key = f"mlp.{idx}.weight"
-            if key not in state:
-                break
-            hidden_list.append(state[key].shape[0])
-            idx += 3
-        hidden_dims = tuple(hidden_list[:-1])  # drop last (num_predicates)
+        if model_type == "transformer":
+            d_model = config.get("d_model", 256)
+            model = RelationTransformer(
+                num_labels=len(label_vocab),
+                num_predicates=len(pred_vocab),
+                d_model=d_model,
+                embed_dim=embed_dim,
+                clip_dim=clip_dim,
+                pose_dim=pose_dim,
+                union_dim=union_dim,
+            )
+            hidden_dims_str = f"d_model={d_model}"
+        else:
+            # Infer hidden dims from state dict weights
+            hidden_list: List[int] = []
+            idx = 0
+            while True:
+                key = f"mlp.{idx}.weight"
+                if key not in state:
+                    break
+                hidden_list.append(state[key].shape[0])
+                idx += 3
+            hidden_dims = tuple(hidden_list[:-1])
+            hidden_dims_str = str(hidden_dims)
+            model = RelationMLP(
+                num_labels=len(label_vocab),
+                num_predicates=len(pred_vocab),
+                embed_dim=embed_dim,
+                hidden_dims=hidden_dims,
+                clip_dim=clip_dim,
+                pose_dim=pose_dim,
+                union_dim=union_dim,
+            )
     else:
         raise ValueError("Expected saved dict with model_state_dict + model_config")
 
-    model = RelationMLP(
-        num_labels=len(label_vocab),
-        num_predicates=len(pred_vocab),
-        embed_dim=embed_dim,
-        hidden_dims=hidden_dims,
-        clip_dim=clip_dim,
-        pose_dim=pose_dim,
-        union_dim=union_dim,
-    )
     model.load_state_dict(state)
     model.to(device)
     model.eval()
 
     print(f"Labels: {len(label_vocab)}, Predicates: {len(pred_vocab)}")
+    print(f"Model type: {model_type}")
     print(f"Mode: clip_dim={clip_dim}, pose_dim={pose_dim}, union_dim={union_dim}")
-    print(f"Hidden dims: {hidden_dims}")
+    print(f"Dims: {hidden_dims_str}")
 
-    # -- 2. Feature group norms (from first layer weights) ------------
+    # -- 2. Feature group norms (from projection weights) ------------
     print("\n" + "=" * 70)
-    print("FEATURE GROUP NORM ANALYSIS (First Layer Weights)")
+    print(f"FEATURE GROUP NORM ANALYSIS ({'Projection Weights' if model_type == 'transformer' else 'First Layer Weights'})")
     print("=" * 70)
     norms = get_feature_group_norms(model)
     contrib = compute_feature_contribution_percentages(norms)

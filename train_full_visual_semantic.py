@@ -41,6 +41,7 @@ PROJ_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROJ_ROOT))
 
 from relation_prediction.model import RelationMLP
+from relation_prediction.relation_transformer import RelationTransformer
 from relation_prediction.vg_dataset import VGRelationshipDataset, Vocab, GEO_DIM, POSE_FEATURE_DIM, UNION_FEATURE_DIM
 
 # ---------------------------------------------------------------------------
@@ -67,6 +68,7 @@ USE_VISUAL = True
 REQUIRE_VISUAL = False
 USE_POSE = False
 USE_UNION = False
+MODEL_TYPE = "mlp"
 
 SEMANTIC_PREDICATES = frozenset({
     "riding", "carrying", "holding", "wearing", "sitting on", "standing on",
@@ -368,23 +370,35 @@ def main():
 
     input_dim = 2 * EMBED_DIM + GEO_DIM + 2 * clip_dim + union_dim + pose_dim
 
-    model = RelationMLP(
-        num_labels=num_labels,
-        num_predicates=num_predicates,
-        embed_dim=EMBED_DIM,
-        hidden_dims=HIDDEN_DIMS,
-        dropout=DROPOUT,
-        clip_dim=clip_dim,
-        pose_dim=pose_dim,
-        union_dim=union_dim,
-    ).to(device)
+    if MODEL_TYPE == "transformer":
+        model = RelationTransformer(
+            num_labels=num_labels,
+            num_predicates=num_predicates,
+            embed_dim=EMBED_DIM,
+            clip_dim=clip_dim,
+            pose_dim=pose_dim,
+            union_dim=union_dim,
+            dropout=DROPOUT if DROPOUT < 0.3 else 0.1,
+        ).to(device)
+    else:
+        model = RelationMLP(
+            num_labels=num_labels,
+            num_predicates=num_predicates,
+            embed_dim=EMBED_DIM,
+            hidden_dims=HIDDEN_DIMS,
+            dropout=DROPOUT,
+            clip_dim=clip_dim,
+            pose_dim=pose_dim,
+            union_dim=union_dim,
+        ).to(device)
 
     param_count = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
     print(f"\n  Model Configuration:")
+    print(f"  Model type:               {MODEL_TYPE}")
     print(f"  Input dimension:          {input_dim}")
     print(f"  Embedding dimension:      {EMBED_DIM}")
-    print(f"  Hidden dims:              {HIDDEN_DIMS}")
+    print(f"  Hidden dims:              {HIDDEN_DIMS if MODEL_TYPE == 'mlp' else 'N/A'}")
     print(f"  Dropout:                  {DROPOUT}")
     print(f"  Parameters:               {param_count:,}")
     print(f"  Batch size:               {BATCH_SIZE}")
@@ -670,19 +684,33 @@ def _validate_pure_visual(dataset: VGRelationshipDataset) -> None:
 
 def _save_checkpoint(model, label_vocab, pred_vocab, ckpt_dir, epoch, val_acc, dataset=None, mode_label="unknown"):
     state = model.state_dict()
-    config = {
-        "num_labels": model.label_emb.num_embeddings,
-        "num_predicates": model.mlp[-1].out_features,
-        "embed_dim": model.label_emb.embedding_dim,
-        "clip_dim": model.clip_dim,
-        "pose_dim": model.pose_dim,
-        "union_dim": model.union_dim,
-    }
-    hdims = []
-    for k in state:
-        if k.startswith("mlp.") and k.endswith(".weight") and k != "mlp.0.weight":
-            hdims.append(state[k].shape[0])
-    config["hidden_dims"] = hdims
+    model_type = "transformer" if isinstance(model, RelationTransformer) else "mlp"
+
+    if model_type == "transformer":
+        config = {
+            "model_type": "transformer",
+            "num_labels": model.label_emb.num_embeddings,
+            "num_predicates": model.num_predicates,
+            "d_model": model.d_model,
+            "embed_dim": model.embed_dim,
+            "clip_dim": model.clip_dim,
+            "pose_dim": model.pose_dim,
+            "union_dim": model.union_dim,
+        }
+    else:
+        config = {
+            "num_labels": model.label_emb.num_embeddings,
+            "num_predicates": model.mlp[-1].out_features,
+            "embed_dim": model.label_emb.embedding_dim,
+            "clip_dim": model.clip_dim,
+            "pose_dim": model.pose_dim,
+            "union_dim": model.union_dim,
+        }
+        hdims = []
+        for k in state:
+            if k.startswith("mlp.") and k.endswith(".weight") and k != "mlp.0.weight":
+                hdims.append(state[k].shape[0])
+        config["hidden_dims"] = hdims
     torch.save({"model_state_dict": state, "model_config": config},
                os.path.join(ckpt_dir, "relation_mlp.pt"))
     label_vocab.save(os.path.join(ckpt_dir, "label_vocab.json"))
@@ -693,6 +721,7 @@ def _save_checkpoint(model, label_vocab, pred_vocab, ckpt_dir, epoch, val_acc, d
         "val_acc": val_acc,
         "timestamp": time.time(),
         "mode": mode_label,
+        "model_type": model_type,
         "use_visual": USE_VISUAL,
         "require_visual": REQUIRE_VISUAL,
         "use_pose": USE_POSE,
@@ -700,7 +729,8 @@ def _save_checkpoint(model, label_vocab, pred_vocab, ckpt_dir, epoch, val_acc, d
         "batch_size": BATCH_SIZE,
         "learning_rate": LR,
         "embed_dim": EMBED_DIM,
-        "hidden_dims": list(HIDDEN_DIMS),
+        "hidden_dims": list(HIDDEN_DIMS) if model_type == "mlp" else None,
+        "d_model": model.d_model if model_type == "transformer" else None,
         "dropout": DROPOUT,
         "seed": SEED,
     }
@@ -959,6 +989,8 @@ def compute_class_weights(pred_counter, pred_vocab, num_predicates, ignore_index
 
 
 def classifier_l2_loss(model, weight=1e-4):
+    if isinstance(model, RelationTransformer):
+        return weight * model.output.weight.norm(2).pow(2) * 0.5
     last_linear = None
     for module in model.mlp:
         if isinstance(module, nn.Linear):
@@ -975,20 +1007,20 @@ if __name__ == "__main__":
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Geometry-only (baseline)
+  # Geometry-only MLP (baseline)
   python train_full_visual_semantic.py
 
-  # Mixed/Fallback mode (legacy, allows zero-vectors)
+  # MLP with visual-semantic features (mixed/fallback)
   python train_full_visual_semantic.py --use-visual
 
-  # PURE visual-semantic mode (strict, no zero-vectors allowed)
+  # PURE visual-semantic MLP (strict, no zero-vectors allowed)
   python train_full_visual_semantic.py --use-visual --require-visual
 
-  # With interaction-aware features (union-region + pose)
-  python train_full_visual_semantic.py --use-visual --use-union --use-pose
+  # TRANSFORMER with visual-semantic features
+  python train_full_visual_semantic.py --use-visual --model transformer
 
-  # Full interaction-aware pipeline (strict visual + union + pose)
-  python train_full_visual_semantic.py --use-visual --require-visual --use-union --use-pose
+  # TRANSFORMER with full interaction-aware features
+  python train_full_visual_semantic.py --use-visual --require-visual --use-union --use-pose --model transformer
         """,
     )
     parser.add_argument("--use-visual", action="store_true", default=USE_VISUAL,
@@ -1004,6 +1036,8 @@ Examples:
     parser.add_argument("--lr", type=float, default=LR)
     parser.add_argument("--seed", type=int, default=SEED)
     parser.add_argument("--checkpoint-dir", type=str, default=str(CHECKPOINT_DIR))
+    parser.add_argument("--model", type=str, default=MODEL_TYPE, choices=["mlp", "transformer"],
+                        help="Model architecture (mlp or transformer)")
     parser.add_argument("--vg-root", type=str, default=str(VG_ROOT))
     args = parser.parse_args()
 
@@ -1015,6 +1049,7 @@ Examples:
     EPOCHS = args.epochs
     LR = args.lr
     SEED = args.seed
+    MODEL_TYPE = args.model
     CHECKPOINT_DIR = Path(args.checkpoint_dir)
     VG_ROOT = Path(args.vg_root)
     VG_IMAGE_DIR = VG_ROOT / "images"

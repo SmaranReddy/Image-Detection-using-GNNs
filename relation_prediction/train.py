@@ -27,6 +27,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
 
 from .model import RelationMLP
+from .relation_transformer import RelationTransformer
 from .vg_dataset import VGRelationshipDataset, Vocab, GEO_DIM, POSE_FEATURE_DIM, UNION_FEATURE_DIM
 
 
@@ -54,6 +55,7 @@ VG_IMAGE_DIR    = None
 CLIP_CACHE_PATH = None
 USE_POSE        = False
 USE_UNION       = False
+MODEL_TYPE      = "mlp"
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +83,8 @@ def train_relation_model(
     clip_cache_path: Optional[str] = CLIP_CACHE_PATH,
     use_pose: bool = USE_POSE,
     use_union: bool = USE_UNION,
-) -> RelationMLP:
+    model_type: str = MODEL_TYPE,
+) -> nn.Module:
     torch.manual_seed(seed)
     random.seed(seed)
 
@@ -229,19 +232,33 @@ def train_relation_model(
     clip_dim = full_ds.CLIP_DIM if use_visual else 0
     pose_dim = POSE_FEATURE_DIM if use_pose else 0
     union_dim = UNION_FEATURE_DIM if use_union else 0
-    model = RelationMLP(
-        num_labels=len(label_vocab),
-        num_predicates=len(pred_vocab),
-        embed_dim=embed_dim,
-        hidden_dims=hidden_dims,
-        dropout=dropout,
-        clip_dim=clip_dim,
-        pose_dim=pose_dim,
-        union_dim=union_dim,
-    ).to(device)
 
-    input_dim = 2 * embed_dim + GEO_DIM + 2 * clip_dim + union_dim + pose_dim
+    if model_type == "transformer":
+        model = RelationTransformer(
+            num_labels=len(label_vocab),
+            num_predicates=len(pred_vocab),
+            embed_dim=embed_dim,
+            clip_dim=clip_dim,
+            pose_dim=pose_dim,
+            union_dim=union_dim,
+            dropout=dropout if dropout < 0.3 else 0.1,
+        ).to(device)
+        input_dim = model.d_model
+    else:
+        model = RelationMLP(
+            num_labels=len(label_vocab),
+            num_predicates=len(pred_vocab),
+            embed_dim=embed_dim,
+            hidden_dims=hidden_dims,
+            dropout=dropout,
+            clip_dim=clip_dim,
+            pose_dim=pose_dim,
+            union_dim=union_dim,
+        ).to(device)
+        input_dim = 2 * embed_dim + GEO_DIM + 2 * clip_dim + union_dim + pose_dim
+
     print(f"  input dim    : {input_dim}")
+    print(f"  model type   : {model_type}")
     print(f"  parameters   : {sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
 
     criterion = nn.CrossEntropyLoss(ignore_index=0)
@@ -347,26 +364,41 @@ def _save(model, label_vocab, pred_vocab, ckpt_dir, dataset=None, mode_label="un
           use_visual=False, require_visual=False):
     # Save model state dict + architecture config for forward-compatible loading.
     state = model.state_dict()
-    config = {
-        "num_labels": model.label_emb.num_embeddings,
-        "num_predicates": model.mlp[-1].out_features,
-        "embed_dim": model.label_emb.embedding_dim,
-        "clip_dim": model.clip_dim,
-        "pose_dim": model.pose_dim,
-        "union_dim": model.union_dim,
-    }
-    # Infer hidden_dims from state dict — iterate over mlp.{i}.weight
-    # keys (skipping the final output layer) using the same stepped
-    # indexing that _infer_hidden_dims in predict.py uses.
-    hdims = []
-    idx = 0
-    while True:
-        key = f"mlp.{idx}.weight"
-        if key not in state:
-            break
-        hdims.append(state[key].shape[0])
-        idx += 3
-    config["hidden_dims"] = hdims[:-1]  # exclude the output layer
+    model_type = "transformer" if isinstance(model, RelationTransformer) else "mlp"
+
+    if model_type == "transformer":
+        config = {
+            "model_type": "transformer",
+            "num_labels": model.label_emb.num_embeddings,
+            "num_predicates": model.num_predicates,
+            "d_model": model.d_model,
+            "embed_dim": model.embed_dim,
+            "clip_dim": model.clip_dim,
+            "pose_dim": model.pose_dim,
+            "union_dim": model.union_dim,
+        }
+    else:
+        config = {
+            "model_type": "mlp",
+            "num_labels": model.label_emb.num_embeddings,
+            "num_predicates": model.mlp[-1].out_features,
+            "embed_dim": model.label_emb.embedding_dim,
+            "clip_dim": model.clip_dim,
+            "pose_dim": model.pose_dim,
+            "union_dim": model.union_dim,
+        }
+        # Infer hidden_dims from state dict — iterate over mlp.{i}.weight
+        # keys (skipping the final output layer) using the same stepped
+        # indexing that _infer_hidden_dims in predict.py uses.
+        hdims = []
+        idx = 0
+        while True:
+            key = f"mlp.{idx}.weight"
+            if key not in state:
+                break
+            hdims.append(state[key].shape[0])
+            idx += 3
+        config["hidden_dims"] = hdims[:-1]  # exclude the output layer
     torch.save({"model_state_dict": state, "model_config": config},
                os.path.join(ckpt_dir, "relation_mlp.pt"))
     label_vocab.save(os.path.join(ckpt_dir, "label_vocab.json"))
@@ -377,13 +409,15 @@ def _save(model, label_vocab, pred_vocab, ckpt_dir, dataset=None, mode_label="un
     meta = {
         "timestamp": time.time(),
         "mode": mode_label,
+        "model_type": model_type,
         "use_visual": use_visual,
         "require_visual": require_visual,
         "batch_size": BATCH_SIZE,
         "epochs": EPOCHS,
         "lr": LR,
         "embed_dim": EMBED_DIM,
-        "hidden_dims": list(HIDDEN_DIMS),
+        "hidden_dims": list(HIDDEN_DIMS) if model_type == "mlp" else None,
+        "d_model": model.d_model if model_type == "transformer" else None,
         "dropout": DROPOUT,
         "seed": SEED,
     }
@@ -434,6 +468,8 @@ if __name__ == "__main__":
                         help="Enable pose features (requires MediaPipe)")
     parser.add_argument("--use-union", action="store_true", default=False,
                         help="Enable union-region CLIP features")
+    parser.add_argument("--model", type=str, default=MODEL_TYPE, choices=["mlp", "transformer"],
+                        help="Model architecture (mlp or transformer)")
     args = parser.parse_args()
 
     train_relation_model(
@@ -450,4 +486,5 @@ if __name__ == "__main__":
         clip_cache_path=args.clip_cache_path,
         use_pose=args.use_pose,
         use_union=args.use_union,
+        model_type=args.model,
     )
