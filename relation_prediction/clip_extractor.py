@@ -69,7 +69,17 @@ class CLIPExtractor:
         Returns:
             Tensor (CLIP_DIM,) — L2-normalised CLIP visual embedding.
         """
+        x1, y1, x2, y2 = box
+        w, h = x2 - x1, y2 - y1
+        if w <= 0 or h <= 0:
+            print(f"[CLIPExtractor] WARNING: degenerate crop box ({w}x{h}), box={box}")
+            return torch.zeros(CLIP_DIM)
+        if x1 < 0 or y1 < 0 or x2 > image.width or y2 > image.height:
+            pass
         crop = image.crop(box)
+        if crop.width == 0 or crop.height == 0:
+            print(f"[CLIPExtractor] WARNING: empty crop after PIL crop, box={box}")
+            return torch.zeros(CLIP_DIM)
         inputs = self._processor(images=crop, return_tensors="pt").to(self._device)
         outputs = self._model(**inputs)
         emb = outputs.pooler_output[0]  # (CLIP_DIM,)

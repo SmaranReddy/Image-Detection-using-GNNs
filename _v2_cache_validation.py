@@ -3,7 +3,8 @@ STEP 2 — Validate Cache Pipeline
 =================================
 Tests: cache generation, loading, serialization (.pt),
        missing-image behavior, contiguous storage correctness,
-       cache key correctness, backward compat with old .pkl.
+       cache key correctness, backward compat with old .pkl,
+       interaction cache (union + pose features).
 """
 import os, pickle, shutil, tempfile
 import torch

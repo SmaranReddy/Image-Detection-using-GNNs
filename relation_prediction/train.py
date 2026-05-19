@@ -137,6 +137,33 @@ def train_relation_model(
     print(f"  label vocab  : {len(label_vocab):,}")
     print(f"  pred vocab   : {len(pred_vocab):,}")
 
+    # Pre-training sanity validation: interaction feature coverage
+    if use_union or use_pose:
+        print(f"\n{'=' * 60}")
+        print("  INTERACTION FEATURE SANITY CHECK")
+        print(f"{'=' * 60}")
+        if use_union:
+            u_nz = sum(1 for f in full_ds.union_feats if f.norm().item() > 0)
+            u_total = len(full_ds.union_feats)
+            u_pct = 100.0 * u_nz / max(u_total, 1)
+            u_mean_norm = sum(f.norm().item() for f in full_ds.union_feats) / max(u_total, 1)
+            print(f"  Union feature coverage: {u_nz}/{u_total} = {u_pct:.1f}%")
+            print(f"  Mean union norm:        {u_mean_norm:.4f}")
+            if u_pct < 50.0:
+                print(f"  [WARNING] Union coverage below 50%!")
+        if use_pose:
+            from .pose_extractor import PoseExtractor
+            PoseExtractor.print_stats()
+            p_nz = sum(1 for f in full_ds.pose_feats if f.norm().item() > 0)
+            p_total = len(full_ds.pose_feats)
+            p_pct = 100.0 * p_nz / max(p_total, 1)
+            p_mean_norm = sum(f.norm().item() for f in full_ds.pose_feats) / max(p_total, 1)
+            print(f"  Pose feature coverage:  {p_nz}/{p_total} = {p_pct:.1f}%")
+            print(f"  Mean pose norm:         {p_mean_norm:.4f}")
+            if p_pct < 50.0:
+                print(f"  [WARNING] Pose coverage below 50%!")
+        print(f"{'=' * 60}\n")
+
     # Pre-training validation: verify dataset purity
     if use_visual:
         real, total, coverage_pct = full_ds.compute_clip_coverage()
@@ -272,6 +299,7 @@ def train_relation_model(
     has_visual = use_visual
     has_union = use_union
     has_pose = use_pose
+    _first_batch_checked = False
 
     for epoch in range(1, epochs + 1):
         model.train()
@@ -280,6 +308,27 @@ def train_relation_model(
         train_total   = 0
 
         for batch in train_loader:
+            if not _first_batch_checked:
+                print(f"\n{'=' * 60}")
+                print("  FIRST BATCH FEATURE VERIFICATION")
+                print(f"{'=' * 60}")
+                bi = 4
+                if has_visual:
+                    print(f"  subj_feat.shape = {batch[bi].shape}, "
+                          f"norm sample: {batch[bi][0].norm().item():.4f}")
+                    print(f"  obj_feat.shape  = {batch[bi+1].shape}, "
+                          f"norm sample: {batch[bi+1][0].norm().item():.4f}")
+                    bi += 2
+                if has_union:
+                    print(f"  union_feat.shape = {batch[bi].shape}, "
+                          f"norm sample: {batch[bi][0].norm().item():.4f}")
+                    bi += 1
+                if has_pose:
+                    print(f"  pose_feat.shape  = {batch[bi].shape}, "
+                          f"norm sample: {batch[bi][0].norm().item():.4f}")
+                    bi += 1
+                print(f"{'=' * 60}\n")
+                _first_batch_checked = True
             subj = batch[0].to(device)
             obj  = batch[1].to(device)
             geo  = batch[2].to(device)

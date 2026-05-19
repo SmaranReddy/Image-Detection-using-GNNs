@@ -17,7 +17,7 @@ import json
 import os
 import random
 from collections import Counter, defaultdict
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
@@ -297,6 +297,20 @@ class VGRelationshipDataset(Dataset):
 
     # ------------------------------------------------------------------
 
+    def _resolve_vg_image_path(self, image_id: Union[int, str]) -> Optional[str]:
+        image_id = str(image_id)
+        extensions = [".jpg", ".png", ".jpeg"]
+        vg_subdirs = ["", "VG_100K", "VG_100K_2"]
+        for subdir in vg_subdirs:
+            for ext in extensions:
+                if subdir:
+                    p = os.path.join(self.vg_image_dir, subdir, f"{image_id}{ext}")
+                else:
+                    p = os.path.join(self.vg_image_dir, f"{image_id}{ext}")
+                if os.path.isfile(p):
+                    return p
+        return None
+
     def _init_clip_cache(
         self,
         clip_cache_path: Optional[str],
@@ -331,9 +345,22 @@ class VGRelationshipDataset(Dataset):
 
         keys_list: List[str] = []
         emb_list: List[torch.Tensor] = []
+        clip_missing = 0
         for img_idx, (iid, objects) in enumerate(image_to_objects.items()):
-            img_path = os.path.join(self.vg_image_dir, f"{iid}.jpg")
-            if not os.path.isfile(img_path):
+            img_path = self._resolve_vg_image_path(iid)
+            if img_path is None:
+                if clip_missing < 20:
+                    candidates_tried = [
+                        os.path.join(self.vg_image_dir, f"{iid}.jpg"),
+                        os.path.join(self.vg_image_dir, "VG_100K", f"{iid}.jpg"),
+                        os.path.join(self.vg_image_dir, "VG_100K_2", f"{iid}.jpg"),
+                    ]
+                    exist_status = " | ".join(
+                        f"exist={os.path.isfile(p)}" for p in candidates_tried
+                    )
+                    print(f"[DEBUG] CLIP cache: missing image id={iid!r} (type={type(iid).__name__})")
+                    print(f"[DEBUG]   Candidates: {exist_status}")
+                    clip_missing += 1
                 continue
 
             pil_img = Image.open(img_path).convert("RGB")
@@ -349,6 +376,8 @@ class VGRelationshipDataset(Dataset):
 
         self.clip_cache = ClipCache.build(keys_list, emb_list)
         print(f"[VG] CLIP cache built: {len(self.clip_cache)} embeddings")
+        if clip_missing > 0:
+            print(f"[VG]   WARNING: {clip_missing} images missing during CLIP cache build")
 
         # Ensure .pt extension for new format.
         save_path = clip_cache_path
@@ -541,39 +570,87 @@ class VGRelationshipDataset(Dataset):
         if self.use_union and self.clip_extractor is None:
             self.clip_extractor = CLIPExtractor()
 
+        pose_available = True
         if self.use_pose:
             self.pose_extractor = PoseExtractor()
             if not PoseExtractor.is_available():
-                print("[VG] Pose features requested but MediaPipe not available.")
-                return
+                print("[VG] Pose features requested but MediaPipe not available. Pose will be zeros.")
+                pose_available = False
 
-        # Group sample indices by image id.
+        # Group sample indices by image id. Normalize to str for consistency.
         image_to_sample_idxs: Dict[str, List[int]] = defaultdict(list)
         for idx, (subj_key, obj_key) in enumerate(self.sample_keys):
             if "_obj_" in subj_key:
-                iid = subj_key.split("_obj_")[0]
+                iid = str(subj_key.split("_obj_")[0])
                 image_to_sample_idxs[iid].append(idx)
 
         total_imgs = len(image_to_sample_idxs)
         processed = 0
         print(f"[VG] Extracting interaction features for {total_imgs} images …")
 
+        # Debug counters
+        total_samples_processed = 0
+        union_success = 0
+        pose_success = 0
+        pose_fail = 0
+        missing_images = 0
+        corrupt_images = 0
+        missing_boxes = 0
+        person_samples = 0
+        skipped_non_person = 0
+
+        # Inspect box map key types (for diagnostics)
+        box_iid_type = str
+        box_oid_type = int
+        if self._obj_box_map:
+            test_key = next(iter(self._obj_box_map.keys()))
+            box_iid_type = type(test_key[0])
+            box_oid_type = type(test_key[1])
+
+        failures_logged = 0
         for iid, sample_idxs in image_to_sample_idxs.items():
-            img_path = os.path.join(self.vg_image_dir, f"{iid}.jpg")
-            if not os.path.isfile(img_path):
+            img_path = self._resolve_vg_image_path(iid)
+            if img_path is None:
+                if failures_logged < 20:
+                    candidates_tried = [
+                        os.path.join(self.vg_image_dir, f"{iid}.jpg"),
+                        os.path.join(self.vg_image_dir, "VG_100K", f"{iid}.jpg"),
+                        os.path.join(self.vg_image_dir, "VG_100K_2", f"{iid}.jpg"),
+                    ]
+                    exist_status = " | ".join(
+                        f"exist={os.path.isfile(p)}" for p in candidates_tried
+                    )
+                    print(f"[DEBUG] Missing image id={iid!r} (type={type(iid).__name__}) in {self.vg_image_dir}")
+                    print(f"[DEBUG]   Candidates: {exist_status}")
+                    failures_logged += 1
+                missing_images += 1
                 continue
 
-            pil_img = Image.open(img_path).convert("RGB")
+            try:
+                pil_img = Image.open(img_path).convert("RGB")
+            except Exception as e:
+                corrupt_images += 1
+                if corrupt_images <= 5:
+                    print(f"[DEBUG] Corrupt image: {img_path} — {e}")
+                continue
+
             img_id = int(iid)
 
             for idx in sample_idxs:
                 subj_key, obj_key = self.sample_keys[idx]
                 subj_oid = int(subj_key.split("_obj_")[1])
                 obj_oid = int(obj_key.split("_obj_")[1])
+
                 subj_box = self._obj_box_map.get((img_id, subj_oid))
                 obj_box = self._obj_box_map.get((img_id, obj_oid))
                 if subj_box is None or obj_box is None:
+                    missing_boxes += 1
+                    if missing_boxes <= 5:
+                        print(f"[DEBUG] Missing box: img_id={img_id} subj_oid={subj_oid} obj_oid={obj_oid} "
+                              f"subj_key={subj_key!r} obj_key={obj_key!r}")
                     continue
+
+                total_samples_processed += 1
 
                 # Union-region CLIP embedding.
                 if self.use_union:
@@ -585,14 +662,21 @@ class VGRelationshipDataset(Dataset):
                     )
                     uemb = self.clip_extractor.extract_crop(pil_img, union_box)
                     self.union_feats[idx] = uemb.clone()
+                    union_success += 1
 
                 # Pose features (only for person subjects).
-                if self.use_pose:
+                if self.use_pose and pose_available:
                     subj_label = self.label_vocab.token(self.samples[idx][0])
                     if subj_label == "person":
+                        person_samples += 1
                         pemb = self.pose_extractor.extract_pose_features(pil_img, subj_box)
                         if pemb is not None:
                             self.pose_feats[idx] = pemb.clone()
+                            pose_success += 1
+                        else:
+                            pose_fail += 1
+                    else:
+                        skipped_non_person += 1
 
             processed += 1
             if processed % 500 == 0:
@@ -601,6 +685,23 @@ class VGRelationshipDataset(Dataset):
         union_count = sum(1 for f in self.union_feats if f.norm().item() > 0) if self.use_union else 0
         pose_count = sum(1 for f in self.pose_feats if f.norm().item() > 0) if self.use_pose else 0
         print(f"[VG] Interaction cache built: {union_count} union, {pose_count} pose features")
+        print(f"[VG]   Total unique images resolved:     {processed}")
+        print(f"[VG]   Total image pairs processed:      {total_samples_processed}")
+        if self.use_union:
+            print(f"[VG]   Successful union features:       {union_success}")
+        if self.use_pose:
+            print(f"[VG]   Successful pose features:        {pose_success}")
+            print(f"[VG]   Failed pose detections:          {pose_fail}")
+            print(f"[VG]   Person samples:                  {person_samples}")
+            print(f"[VG]   Skipped (non-person subject):    {skipped_non_person}")
+        if missing_images > 0:
+            print(f"[VG]   WARNING: Missing images skipped:     {missing_images}")
+        if corrupt_images > 0:
+            print(f"[VG]   WARNING: Corrupt images skipped:     {corrupt_images}")
+        if missing_boxes > 0:
+            print(f"[VG]   WARNING: Missing box lookups:        {missing_boxes}")
+            print(f"[VG]   Box map key type:   ({box_iid_type.__name__}, {box_oid_type.__name__})")
+            print(f"[VG]   Lookup key type:    (int, int)")
 
     # ------------------------------------------------------------------
 
@@ -679,10 +780,12 @@ class VGRelationshipDataset(Dataset):
                 obj_key  = f"{iid}_obj_{obj_oid}"  if obj_oid >= 0 else ""
 
                 # Record valid object boxes for CLIP cache construction.
+                # Normalize iid to int for type-consistent lookups.
+                iid_int = int(iid) if not isinstance(iid, int) else iid
                 if subj_oid >= 0:
-                    self._obj_box_map[(iid, subj_oid)] = subj_box
+                    self._obj_box_map[(iid_int, subj_oid)] = subj_box
                 if obj_oid >= 0:
-                    self._obj_box_map[(iid, obj_oid)] = obj_box
+                    self._obj_box_map[(iid_int, obj_oid)] = obj_box
 
                 raw.append((subj_name, obj_name, geo, pred, subj_key, obj_key))
 

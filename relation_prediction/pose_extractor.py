@@ -47,6 +47,7 @@ class PoseExtractor:
     """
 
     _pose = None
+    _extraction_stats = {"attempts": 0, "success": 0, "fail_no_detection": 0, "fail_unavailable": 0}
 
     @classmethod
     def _lazy_load(cls) -> None:
@@ -86,11 +87,16 @@ class PoseExtractor:
             Tensor (POSE_FEATURE_DIM,) or None if no person/pose detected.
         """
         self._lazy_load()
+        PoseExtractor._extraction_stats["attempts"] += 1
         if self._pose is False:
+            PoseExtractor._extraction_stats["fail_unavailable"] += 1
             return None
 
         x1, y1, x2, y2 = person_box
         w, h = x2 - x1, y2 - y1
+        if w <= 0 or h <= 0:
+            PoseExtractor._extraction_stats["fail_no_detection"] += 1
+            return None
         margin_x, margin_y = w * 0.2, h * 0.2
         crop_box = (
             max(0, x1 - margin_x),
@@ -99,11 +105,16 @@ class PoseExtractor:
             min(image.height, y2 + margin_y),
         )
         person_crop = image.crop(crop_box)
+        if person_crop.width == 0 or person_crop.height == 0:
+            PoseExtractor._extraction_stats["fail_no_detection"] += 1
+            return None
         results = self._pose.process(np.array(person_crop))
 
         if not results or results.pose_landmarks is None:
+            PoseExtractor._extraction_stats["fail_no_detection"] += 1
             return None
 
+        PoseExtractor._extraction_stats["success"] += 1
         L = results.pose_landmarks.landmark
 
         def kp(idx):
@@ -192,3 +203,15 @@ class PoseExtractor:
         ], dtype=np.float32)
 
         return torch.from_numpy(features)
+
+    @classmethod
+    def print_stats(cls) -> None:
+        s = cls._extraction_stats
+        total = s["attempts"]
+        ok = s["success"]
+        no_detect = s["fail_no_detection"]
+        unavail = s["fail_unavailable"]
+        print(f"[PoseExtractor Stats] Attempts={total}, Success={ok}, "
+              f"NoDetection={no_detect}, Unavailable={unavail}")
+        if total > 0:
+            print(f"[PoseExtractor Stats] Success rate: {100.0 * ok / max(total, 1):.1f}%")
