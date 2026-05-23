@@ -62,6 +62,18 @@ from utils.blip_captioner import (
 from utils.clip_scorer import clip_rerank_captions, get_clip_scorer
 from utils.detection_verifier import verify_detections
 from utils.visualize import draw_relation_boxes
+from utils.eval_debug import (
+    save_visual_debug,
+    save_debug_composite,
+    run_baseline_comparison_debug,
+    classify_failures,
+    build_failure_report,
+    generate_attention_visualization,
+    analyze_relation_errors,
+    build_final_evaluation_table,
+    generate_final_report,
+    compute_refined_prior_adjustment,
+)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -125,6 +137,7 @@ def run_pure_visual_inference(
     image: Image.Image,
     top_k: int = 3,
     temperature: float = 2.0,
+    improved_priors: bool = False,
 ) -> Tuple[List[Dict], List[Dict]]:
     """Run calibrated visual-semantic relation inference with precision filtering.
 
@@ -169,6 +182,7 @@ def run_pure_visual_inference(
         top_k=top_k,
         image=image,
         temperature=temperature,
+        improved_priors=improved_priors,
     )
 
     if not relations:
@@ -297,6 +311,9 @@ def run_grounded_pipeline(
     top_k_relations: int = 3,
     temperature: float = 2.0,
     debug: bool = False,
+    compare_baseline: bool = False,
+    improved_priors: bool = False,
+    diagnose: bool = False,
 ) -> Dict:
     """Run the complete grounded caption pipeline on a single image.
 
@@ -317,6 +334,8 @@ def run_grounded_pipeline(
     result: Dict = {
         "image_path": image_path,
         "timestamp": time.time(),
+        "improved_priors": improved_priors,
+        "diagnose": diagnose,
     }
 
     # Load image
@@ -369,6 +388,7 @@ def run_grounded_pipeline(
         detections, image,
         top_k=top_k_relations,
         temperature=temperature,
+        improved_priors=improved_priors,
     )
     result["relations"] = relations
     result["raw_predictions"] = raw_predictions
@@ -396,6 +416,14 @@ def run_grounded_pipeline(
     )
     result["raw_caption"] = raw_caption
     result["caption"] = gated_caption
+
+    # ── Baseline: Vanilla BLIP for comparison ───────────────────
+    result["vanilla_caption"] = ""
+    if compare_baseline:
+        from utils.blip_captioner import generate_blip_baseline
+        vanilla = generate_blip_baseline(image)
+        result["vanilla_caption"] = vanilla
+        result["compare_baseline"] = True
 
     # ── STEP 7 — Debug summary ──────────────────────────────────
     semantic_count = sum(1 for r in relations if r["predicate"] in SEMANTIC_PREDICATES)
@@ -865,6 +893,54 @@ def main():
         help="Skip BLIP caption generation, only run relation inference (faster)",
     )
 
+    # ── PHASE 1: Visual debug outputs ───────────────────────────────────
+    parser.add_argument(
+        "--debug-full", action="store_true",
+        help="Phase 1: Save full visual debug output (5 panels + composite) to outputs/debug/",
+    )
+    parser.add_argument(
+        "--debug-dir", type=str, default="outputs/debug",
+        help="Directory for debug visualizations (default: outputs/debug)",
+    )
+
+    # ── PHASE 2: Baseline comparison ────────────────────────────────────
+    parser.add_argument(
+        "--compare-baseline", action="store_true",
+        help="Phase 2: Compare vanilla BLIP vs grounded pipeline side-by-side",
+    )
+
+    # ── PHASE 3+8+9: Full evaluation ────────────────────────────────────
+    parser.add_argument(
+        "--evaluate", action="store_true",
+        help="Phase 3+8+9: Run full evaluation (failure analysis + table + report)",
+    )
+    parser.add_argument(
+        "--eval-dir", type=str, default="analysis_results",
+        help="Directory for analysis results (default: analysis_results)",
+    )
+
+    # ── PHASE 5: Attention analysis ─────────────────────────────────────
+    parser.add_argument(
+        "--attention", action="store_true",
+        help="Phase 5: Generate attention/feature contribution analysis",
+    )
+    parser.add_argument(
+        "--attention-dir", type=str, default="outputs/attention",
+        help="Directory for attention outputs (default: outputs/attention)",
+    )
+
+    # ── PHASE 6: Relation error diagnostics ─────────────────────────────
+    parser.add_argument(
+        "--diagnose", action="store_true",
+        help="Phase 6: Print detailed per-pair relation diagnostics",
+    )
+
+    # ── PHASE 7: Use improved semantic priors ──────────────────────────
+    parser.add_argument(
+        "--improved-priors", action="store_true",
+        help="Phase 7: Use refined object-compatibility priors (soft penalties)",
+    )
+
     args = parser.parse_args()
 
     # ── Verify model first ──────────────────────────────────────────────
@@ -894,13 +970,24 @@ def main():
     output_root = Path(args.output_dir)
     os.makedirs(str(output_root), exist_ok=True)
 
+    # ── Setup eval dirs ─────────────────────────────────────────────────
+    if args.evaluate:
+        eval_dir = args.eval_dir
+        os.makedirs(eval_dir, exist_ok=True)
+        debug_dir = args.debug_dir
+        os.makedirs(debug_dir, exist_ok=True)
+
     # ── Run pipeline on each image ──────────────────────────────────────
     all_results: List[Dict] = []
+    all_failures: List[Dict] = []
+    all_comparisons: List[Dict] = []
 
     for img_path in image_paths:
         print(f"\n{'#' * 70}")
         print(f"  Processing: {img_path}")
         print(f"{'#' * 70}")
+
+        img_name = Path(img_path).stem
 
         # Run the full grounded pipeline (or just relations)
         if args.relations_only:
@@ -908,6 +995,9 @@ def main():
                 img_path,
                 top_k_relations=args.top_k,
                 debug=args.debug,
+                compare_baseline=args.compare_baseline or args.compare or args.evaluate,
+                improved_priors=args.improved_priors,
+                diagnose=args.diagnose,
             )
             # Skip BLIP: mark caption as N/A
             if not result.get("caption") or result["caption"] == "No semantic interactions detected.":
@@ -919,19 +1009,130 @@ def main():
                 img_path,
                 top_k_relations=args.top_k,
                 debug=args.debug,
+                compare_baseline=args.compare_baseline or args.compare or args.evaluate,
+                improved_priors=args.improved_priors,
+                diagnose=args.diagnose,
             )
         all_results.append(result)
 
-        # Debug visualization
+        # ── PHASE 1: Visual debug outputs ───────────────────────────────
+        if args.debug_full or args.evaluate:
+            image = Image.open(img_path).convert("RGB")
+            save_debug_composite(
+                image,
+                result.get("raw_detections", []),
+                result.get("detections", []),
+                result.get("relations", []),
+                result.get("caption", ""),
+                img_name,
+                output_dir=debug_dir if args.evaluate else args.debug_dir,
+            )
+
+        # Legacy debug visualization
         if args.debug:
             debug_dir = output_root / "debug_vis"
             os.makedirs(str(debug_dir), exist_ok=True)
-            debug_path = str(debug_dir / f"{Path(img_path).stem}_debug.png")
+            debug_path = str(debug_dir / f"{img_name}_debug.png")
             save_debug_visualization(result, debug_path)
 
-        # Side-by-side comparison
-        if args.compare:
-            run_baseline_comparison(img_path, str(output_root / "comparison"))
+        # ── PHASE 2: Baseline comparison ────────────────────────────────
+        if args.compare_baseline or args.compare:
+            if args.compare_baseline:
+                comp_dir = os.path.join(args.eval_dir, "baseline_comparison")
+            else:
+                comp_dir = str(output_root / "comparison")
+            image = Image.open(img_path).convert("RGB")
+            comparison = run_baseline_comparison_debug(
+                image,
+                img_name,
+                result.get("vanilla_caption", ""),
+                result.get("caption", ""),
+                result.get("relations", []),
+                result.get("detections", []),
+                output_dir=comp_dir,
+            )
+            all_comparisons.append(comparison)
+
+        # ── PHASE 3+6: Failure analysis + diagnostics ──────────────────
+        if args.evaluate:
+            failure = classify_failures(
+                img_name,
+                result.get("detections", []),
+                result.get("relations", []),
+                result.get("raw_predictions", []),
+                result.get("caption", ""),
+                result.get("vanilla_caption", None),
+            )
+            all_failures.append(failure)
+
+        # ── PHASE 5: Attention analysis (per-pair) ──────────────────────
+        if args.attention:
+            ds = result.get("detections", [])
+            if len(ds) >= 2 and rel_predict._model is not None:
+                a, b = ds[0], ds[1]
+                img_w, img_h = result.get("image_size", [640, 480])
+                image_pil = Image.open(img_path).convert("RGB")
+
+                logits, pred_tokens, s_idx, o_idx = rel_predict._get_raw_logits(
+                    a["label"], b["label"],
+                    a["box"], b["box"],
+                    img_w=img_w, img_h=img_h,
+                    image=image_pil,
+                )
+                if logits is not None:
+                    # Extract features for meaningful attention visualization
+                    subj_norm = rel_predict.normalize_label(a["label"])
+                    obj_norm = rel_predict.normalize_label(b["label"])
+                    subj_box = tuple(a["box"])
+                    obj_box = tuple(b["box"])
+
+                    geo = rel_predict.extract_geo_features(subj_box, obj_box, img_w, img_h)
+                    geo_t = torch.tensor([geo], dtype=torch.float32)
+
+                    subj_feat_t: Optional[torch.Tensor] = None
+                    obj_feat_t: Optional[torch.Tensor] = None
+                    union_feat_t: Optional[torch.Tensor] = None
+                    pose_feat_t: Optional[torch.Tensor] = None
+
+                    clip_dim = rel_predict._model_clip_dim
+                    union_dim = rel_predict._model_union_dim
+                    pose_dim = rel_predict._model_pose_dim
+
+                    if clip_dim > 0 or union_dim > 0:
+                        rel_predict._ensure_clip_model()
+                        if clip_dim > 0 and rel_predict._clip_model is not None:
+                            subj_feat_t = rel_predict._clip_model.extract_crop(
+                                image_pil, subj_box
+                            ).unsqueeze(0)
+                            obj_feat_t = rel_predict._clip_model.extract_crop(
+                                image_pil, obj_box
+                            ).unsqueeze(0)
+                        if union_dim > 0 and rel_predict._clip_model is not None:
+                            uemb = rel_predict._clip_model.extract_union_embedding(
+                                image_pil, subj_box, obj_box
+                            )
+                            union_feat_t = uemb.unsqueeze(0)
+
+                    if pose_dim > 0 and subj_norm == "person":
+                        rel_predict._ensure_pose_model()
+                        if rel_predict.PoseExtractor.is_available() and rel_predict._pose_model is not None:
+                            pf = rel_predict._pose_model.extract_pose_features(image_pil, subj_box)
+                            if pf is not None:
+                                pose_feat_t = pf.unsqueeze(0)
+
+                    pred_labels = [rel_predict._pred_vocab.token(i)
+                                   for i in range(len(rel_predict._pred_vocab))]
+                    generate_attention_visualization(
+                        rel_predict._model,
+                        torch.tensor([s_idx]),
+                        torch.tensor([o_idx]),
+                        geo_t,
+                        subj_feat_t, obj_feat_t, union_feat_t, pose_feat_t,
+                        pred_labels,
+                        output_dir=os.path.join(args.eval_dir, "attention") if args.evaluate else args.attention_dir,
+                        image_name=img_name,
+                        device=rel_predict._device,
+                    )
 
     # ── Save all results with full debug info (Step 7) ──────────────────
     results_path = output_root / "all_results.json"
@@ -986,6 +1187,58 @@ def main():
                     print(f"    {name:15s}: {norm:8.4f}  ({pct:5.1f}%)")
         except Exception as e:
             print(f"\n  Feature analysis: {e}")
+
+    # ── PHASE 3+8+9: Build evaluation outputs ──────────────────────────
+    if args.evaluate:
+        # Phase 8: Evaluation table
+        table_data = []
+        for r in all_results:
+            img_name = Path(r["image_path"]).stem
+            # Find matching failure
+            failure = next((f for f in all_failures if f["image_name"] == img_name), {})
+            table_data.append({
+                "image_name": img_name,
+                "detections": r.get("detections", []),
+                "relations": r.get("relations", []),
+                "caption": r.get("caption", ""),
+                "vanilla_caption": r.get("vanilla_caption", ""),
+                "failures": failure,
+                "raw_caption": r.get("raw_caption", ""),
+            })
+
+        eval_csv = build_final_evaluation_table(
+            table_data,
+            output_dir=args.eval_dir,
+        )
+
+        # Phase 3: Failure report
+        fail_path = build_failure_report(
+            all_failures,
+            output_dir=args.eval_dir,
+        )
+
+        # Phase 9: Final report
+        attention_path = None
+        attn_dir = os.path.join(args.eval_dir, "attention")
+        if os.path.isdir(attn_dir):
+            attn_files = sorted(Path(attn_dir).glob("*_attention.json"))
+            if attn_files:
+                attention_path = str(attn_files[0])
+
+        report_path = generate_final_report(
+            table_data,
+            failure_report_path=fail_path,
+            eval_table_path=eval_csv,
+            attention_report_path=attention_path,
+            output_dir=args.eval_dir,
+        )
+
+        print(f"\n{'=' * 70}")
+        print(f"  FULL EVALUATION COMPLETE")
+        print(f"{'=' * 70}")
+        print(f"  Evaluation CSV:  {eval_csv}")
+        print(f"  Failure report:  {fail_path}")
+        print(f"  Final report:    {report_path}")
 
     # ── Summary ─────────────────────────────────────────────────────────
     total_rels = sum(len(r.get('relations', [])) for r in all_results)

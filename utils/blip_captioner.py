@@ -1,5 +1,5 @@
 """
-InstructBLIP-based caption generator conditioned on a structured scene graph.
+BLIP-based caption generator conditioned on a structured scene graph.
 
 Drop-in replacement for generate_causal_caption() — same call signature,
 richer output via a vision-language model.
@@ -12,11 +12,12 @@ Evidence gating runs after generation:
 from __future__ import annotations
 
 import re
+import time
 from typing import Dict, List, Optional, Tuple
 
 import torch
 from PIL import Image
-from transformers import InstructBlipForConditionalGeneration, InstructBlipProcessor
+from transformers import BlipForConditionalGeneration, BlipProcessor
 
 from utils.relation_corrector import correct_caption_relations
 
@@ -27,27 +28,49 @@ Relationship = Tuple[str, str, str]   # (subject, relation, object)
 # Model singleton — loaded once on first call
 # ---------------------------------------------------------------------------
 
-_processor: InstructBlipProcessor | None = None
-_model: InstructBlipForConditionalGeneration | None = None
+_processor: BlipProcessor | None = None
+_model: BlipForConditionalGeneration | None = None
 _device: torch.device | None = None
+_load_time: float = 0.0
 
-_MODEL_ID = "Salesforce/instructblip-flan-t5-xl"
+_MODEL_ID = "Salesforce/blip-image-captioning-base"
 
 
 def _load_model() -> None:
-    global _processor, _model, _device
+    global _processor, _model, _device, _load_time
 
-    _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dtype   = torch.float16 if _device.type == "cuda" else torch.float32
+    t0 = time.time()
 
-    print(f"[blip_captioner] Loading {_MODEL_ID} on {_device} …")
-    _processor = InstructBlipProcessor.from_pretrained(_MODEL_ID)
-    _model     = InstructBlipForConditionalGeneration.from_pretrained(
-        _MODEL_ID, torch_dtype=dtype
-    )
-    _model.to(_device)
+    device_str = "cuda" if torch.cuda.is_available() else "cpu"
+    dtype      = torch.float16 if device_str == "cuda" else torch.float32
+
+    print(f"[BLIP] Loading {_MODEL_ID} on {device_str} …")
+
+    try:
+        _processor = BlipProcessor.from_pretrained(_MODEL_ID)
+        _model     = BlipForConditionalGeneration.from_pretrained(
+            _MODEL_ID, torch_dtype=dtype
+        )
+        _model.to(device_str)
+    except Exception as e:
+        if device_str == "cuda":
+            print(f"[BLIP] CUDA load failed: {e}")
+            print(f"[BLIP] Falling back to CPU …")
+            device_str = "cpu"
+            dtype = torch.float32
+            torch.cuda.empty_cache()
+            _processor = BlipProcessor.from_pretrained(_MODEL_ID)
+            _model     = BlipForConditionalGeneration.from_pretrained(
+                _MODEL_ID, torch_dtype=dtype
+            )
+            _model.to(device_str)
+        else:
+            raise e
+
+    _device = torch.device(device_str)
     _model.eval()
-    print("[blip_captioner] Model ready.")
+    _load_time = time.time() - t0
+    print(f"[BLIP] Model ready in {_load_time:.1f}s on {_device}.")
 
 
 # ---------------------------------------------------------------------------
@@ -250,7 +273,7 @@ def build_semantic_prompt(
         verbalized_relations: ["the person is riding a bicycle", ...]
 
     Returns:
-        Prompt string for InstructBLIP.
+        Prompt string for BLIP.
     """
     obj_lines = [
         f"- {_indefinite_article(d['label'])} {d['label']}"
@@ -1094,16 +1117,15 @@ def generate_blip_candidates(
 
     if _model is None:
         _load_model()
+    else:
+        print("[BLIP] Reusing cached caption model")
 
+    t0 = time.time()
     pil_image = _to_pil(image)
-
-    ungrounded_prompt = (
-        "Write a concise description of what is happening in this image."
-    )
 
     inputs = _processor(
         images=pil_image,
-        text=ungrounded_prompt,
+        text="a photo of",
         return_tensors="pt",
     ).to(_device)
 
@@ -1136,6 +1158,12 @@ def generate_blip_candidates(
         if c and c not in seen:
             seen.add(c)
             unique_candidates.append(c)
+
+    gen_time = time.time() - t0
+    print(f"[BLIP] Generated {len(unique_candidates)} candidates in {gen_time:.2f}s on {_device}.")
+
+    if _device.type == "cuda":
+        torch.cuda.empty_cache()
 
     return unique_candidates
 
@@ -1171,16 +1199,15 @@ def generate_blip_baseline(
 
     if _model is None:
         _load_model()
+    else:
+        print("[BLIP] Reusing cached caption model")
 
+    t0 = time.time()
     pil_image = _to_pil(image)
-
-    ungrounded_prompt = (
-        "Write a concise description of what is happening in this image."
-    )
 
     inputs = _processor(
         images=pil_image,
-        text=ungrounded_prompt,
+        text="a photo of",
         return_tensors="pt",
     ).to(_device)
 
@@ -1193,6 +1220,12 @@ def generate_blip_baseline(
         )
 
     caption = _processor.decode(output_ids[0], skip_special_tokens=True).strip()
+    gen_time = time.time() - t0
+    print(f"[BLIP] Baseline caption generated in {gen_time:.2f}s on {_device}.")
+
+    if _device.type == "cuda":
+        torch.cuda.empty_cache()
+
     return caption
 
 
@@ -1206,7 +1239,7 @@ def generate_blip_caption(
     confidence_threshold: float = 0.5,
 ) -> str:
     """
-    Generate a grounded scene caption using InstructBLIP.
+    Generate a grounded scene caption using BLIP.
 
     Runs evidence gating after decoding so the returned string only contains
     claims supported by the provided detections.
@@ -1227,13 +1260,16 @@ def generate_blip_caption(
 
     if _model is None:
         _load_model()
+    else:
+        print("[BLIP] Reusing cached caption model")
 
+    t0 = time.time()
     pil_image = _to_pil(image)
-    prompt    = build_prompt(detections, relationships)
 
+    # BLIP base generates best in unconditional mode
     inputs = _processor(
         images=pil_image,
-        text=prompt,
+        text="a photo of",
         return_tensors="pt",
     ).to(_device)
 
@@ -1246,6 +1282,12 @@ def generate_blip_caption(
         )
 
     raw_caption = _processor.decode(output_ids[0], skip_special_tokens=True).strip()
+    gen_time = time.time() - t0
+    print(f"[BLIP] Grounded caption generated in {gen_time:.2f}s on {_device}.")
+
+    if _device.type == "cuda":
+        torch.cuda.empty_cache()
+
     return gate_caption(
         raw_caption,
         detections,
@@ -1269,7 +1311,7 @@ def generate_blip_semantic_caption(
     Pipeline:
         1. Verbalize structured relations into natural interaction descriptions
         2. Build semantic prompt with scene elements + likely interactions
-        3. Generate with InstructBLIP
+        3. Generate with BLIP
         4. Evidence gating (same as existing pipeline)
 
     Args:
@@ -1289,7 +1331,10 @@ def generate_blip_semantic_caption(
 
     if _model is None:
         _load_model()
+    else:
+        print("[BLIP] Reusing cached caption model")
 
+    t0 = time.time()
     pil_image = _to_pil(image)
 
     # Step 2+3 - Verbalize relations with confidence-aware language.
@@ -1303,12 +1348,15 @@ def generate_blip_semantic_caption(
         for r in relations
     ]
 
-    # Step 6 - Build redesigned semantic prompt
+    # Step 6 - Build redesigned semantic prompt (kept for display / debugging)
     prompt = build_semantic_prompt(detections, verbalized)
 
+    # BLIP base generates best in unconditional mode — pass a minimal prompt
+    # to start generation; the evidence gating (gate_caption) provides the
+    # grounded safety net.
     inputs = _processor(
         images=pil_image,
-        text=prompt,
+        text="a photo of",
         return_tensors="pt",
     ).to(_device)
 
@@ -1321,6 +1369,11 @@ def generate_blip_semantic_caption(
         )
 
     raw_caption = _processor.decode(output_ids[0], skip_special_tokens=True).strip()
+    gen_time = time.time() - t0
+    print(f"[BLIP] Semantic caption generated in {gen_time:.2f}s on {_device}.")
+
+    if _device.type == "cuda":
+        torch.cuda.empty_cache()
 
     # ── Relation-grounded caption correction (Steps 1-7) ──────────────
     # Correct unsupported actions using grounded relations before gating.

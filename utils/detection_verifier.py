@@ -280,7 +280,10 @@ def verify_detections(
                 return_tensors="pt",
             ).to(scorer.device)
             crop_features = scorer._model.get_image_features(**crop_inputs)
-            crop_embedding = F.normalize(crop_features.pooler_output[0], dim=-1)
+            if hasattr(crop_features, "pooler_output"):
+                crop_embedding = F.normalize(crop_features.pooler_output[0], dim=-1)
+            else:
+                crop_embedding = F.normalize(crop_features[0], dim=-1)
 
         keep, trust_score, clip_similarities = _verify_single_detection(
             det, crop_embedding, text_embeddings, image_size,

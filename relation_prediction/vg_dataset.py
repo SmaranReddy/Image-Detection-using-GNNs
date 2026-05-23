@@ -565,7 +565,25 @@ class VGRelationshipDataset(Dataset):
 
         if self.vg_image_dir is None or not os.path.isdir(self.vg_image_dir):
             print("[VG] Interaction cache: no images dir, using zeros.")
+            print(f"[VG]   vg_image_dir={self.vg_image_dir!r}")
             return
+
+        # ------------------------------------------------------------------
+        # Path validation: verify image directories actually exist
+        # ------------------------------------------------------------------
+        vg_100k_dir = os.path.join(self.vg_image_dir, "VG_100K")
+        vg_100k_2_dir = os.path.join(self.vg_image_dir, "VG_100K_2")
+        print(f"[VG]   Image root:  {self.vg_image_dir}")
+        print(f"[VG]   VG_100K:     {vg_100k_dir}  exist={os.path.isdir(vg_100k_dir)}")
+        print(f"[VG]   VG_100K_2:   {vg_100k_2_dir}  exist={os.path.isdir(vg_100k_2_dir)}")
+        if not os.path.isdir(vg_100k_dir) and not os.path.isdir(vg_100k_2_dir):
+            print("[VG]   WARNING: Neither VG_100K nor VG_100K_2 found!")
+
+        # Quick spot-check: try to resolve a known image
+        _test_path = self._resolve_vg_image_path("1")
+        print(f"[VG]   Spot-check id=1: {_test_path or 'NOT FOUND'}")
+
+        # ------------------------------------------------------------------
 
         if self.use_union and self.clip_extractor is None:
             self.clip_extractor = CLIPExtractor()
@@ -641,8 +659,14 @@ class VGRelationshipDataset(Dataset):
                 subj_oid = int(subj_key.split("_obj_")[1])
                 obj_oid = int(obj_key.split("_obj_")[1])
 
+                # Lookup boxes with type-consistent keys.
+                # Primary: (int, int) — matches _load's iid_int normalization.
                 subj_box = self._obj_box_map.get((img_id, subj_oid))
                 obj_box = self._obj_box_map.get((img_id, obj_oid))
+                # Fallback: try (str, int) in case _load stored string keys.
+                if subj_box is None or obj_box is None:
+                    subj_box = self._obj_box_map.get((str(img_id), subj_oid), subj_box)
+                    obj_box = self._obj_box_map.get((str(img_id), obj_oid), obj_box)
                 if subj_box is None or obj_box is None:
                     missing_boxes += 1
                     if missing_boxes <= 5:

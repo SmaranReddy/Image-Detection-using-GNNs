@@ -1,8 +1,9 @@
 {
-  "epoch": 25,
-  "val_acc": 0.6464807436918991,
-  "timestamp": 1778765260.6024816,
+  "epoch": 12,
+  "val_acc": 0.6393094289508632,
+  "timestamp": 1779221702.4484258,
   "mode": "PURE VISUAL-SEMANTIC (strict) + pose + union",
+  "model_type": "transformer",
   "use_visual": true,
   "require_visual": true,
   "use_pose": true,
@@ -10,10 +11,8 @@
   "batch_size": 128,
   "learning_rate": 0.0003,
   "embed_dim": 64,
-  "hidden_dims": [
-    256,
-    128
-  ],
+  "hidden_dims": null,
+  "d_model": 256,
   "dropout": 0.3,
   "seed": 42,
   "dataset_size": 37658,

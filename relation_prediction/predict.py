@@ -1473,6 +1473,65 @@ WEAK_SPATIAL_THRESHOLD: float = 0.85
 REJECT_INANIMATE_SPATIAL: bool = True
 
 
+# ── Improved semantic priors (Phase 7) ──────────────────────────────
+_IMPROVED_PRIORS = {
+    "sitting on": {
+        "reject_objects": {"dog", "cat", "bird", "cell phone", "bottle", "cup",
+                           "book", "frisbee", "kite", "baseball bat",
+                           "tennis racket", "sports ball"},
+        "soft_reject_penalty": -0.35,
+    },
+    "riding": {
+        "reject_objects": {"chair", "couch", "bench", "bed", "dining table",
+                           "dog", "cat", "cell phone", "bottle", "cup", "book",
+                           "frisbee", "kite", "backpack", "handbag", "suitcase",
+                           "tie", "umbrella", "sports ball"},
+        "soft_reject_penalty": -0.40,
+    },
+    "holding": {
+        "reject_objects": {"chair", "couch", "bench", "bed", "dining table",
+                           "car", "bicycle", "truck", "bus", "train",
+                           "horse", "elephant", "cow", "toilet", "sink",
+                           "refrigerator"},
+        "soft_reject_penalty": -0.30,
+    },
+    "wearing": {
+        "reject_objects": {"chair", "couch", "bench", "bed", "dining table",
+                           "car", "bicycle", "bus", "truck", "train",
+                           "cell phone", "bottle", "cup", "book",
+                           "dog", "cat", "horse", "cow", "elephant",
+                           "frisbee", "kite", "sports ball", "skateboard",
+                           "surfboard", "toilet", "sink", "refrigerator"},
+        "soft_reject_penalty": -0.35,
+    },
+    "carrying": {
+        "reject_objects": {"chair", "couch", "bench", "bed", "dining table",
+                           "car", "bicycle", "bus", "truck", "train",
+                           "toilet", "sink", "refrigerator",
+                           "horse", "cow", "elephant"},
+        "soft_reject_penalty": -0.25,
+    },
+    "standing on": {
+        "reject_objects": {"cell phone", "bottle", "cup", "book",
+                           "dog", "cat", "bird", "frisbee", "kite",
+                           "sports ball"},
+        "soft_reject_penalty": -0.30,
+    },
+}
+
+
+def _apply_refined_priors(subject: str, predicate: str, object: str) -> float:
+    """Apply object-level soft semantic penalties (Phase 7)."""
+    prior = _IMPROVED_PRIORS.get(predicate)
+    if not prior:
+        return 0.0
+    obj_lower = object.lower().replace("_", " ")
+    reject_set = prior.get("reject_objects", set())
+    if obj_lower in reject_set:
+        return prior.get("soft_reject_penalty", -0.25)
+    return 0.0
+
+
 def infer_relationships_semantic(
     detections: List[Detection],
     threshold: float = 0.05,
@@ -1482,6 +1541,7 @@ def infer_relationships_semantic(
     image: Optional[Image.Image] = None,
     temperature: float = _DEFAULT_TEMPERATURE,
     debug: bool = True,
+    improved_priors: bool = False,
 ) -> Tuple[List[Dict], List[Dict]]:
     """
     Calibrated semantic relation inference with lightweight priors (Steps 3-6).
@@ -1605,6 +1665,10 @@ def infer_relationships_semantic(
 
                 calib_score = calibrated[pidx].item()
                 bonus, penalty, prior_total = _compute_prior_adjustment(subj_norm, pred_name, obj_norm)
+                if improved_priors:
+                    refined_penalty = _apply_refined_priors(subj_norm, pred_name, obj_norm)
+                    penalty += refined_penalty
+                    prior_total = bonus + penalty
                 final_score = calib_score + prior_total
 
                 per_pred_debug.append({

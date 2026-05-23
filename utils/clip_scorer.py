@@ -79,7 +79,14 @@ class CLIPSimilarityScorer:
         ).to(self.device)
 
         outputs = self._model.get_image_features(**inputs)
-        return F.normalize(outputs.pooler_output[0], dim=-1)
+
+        if hasattr(outputs, "pooler_output"):
+            embeddings = outputs.pooler_output
+        else:
+            embeddings = outputs
+
+        return F.normalize(embeddings, dim=-1)
+
 
     @torch.no_grad()
     def encode_text(self, text: str) -> torch.Tensor:
@@ -100,7 +107,13 @@ class CLIPSimilarityScorer:
         ).to(self.device)
 
         outputs = self._model.get_text_features(**inputs)
-        return F.normalize(outputs.pooler_output[0], dim=-1)
+
+        if hasattr(outputs, "pooler_output"):
+            embeddings = outputs.pooler_output
+        else:
+            embeddings = outputs
+
+        return F.normalize(embeddings, dim=-1)
 
 
     @torch.no_grad()
@@ -125,7 +138,13 @@ class CLIPSimilarityScorer:
         ).to(self.device)
 
         outputs = self._model.get_text_features(**inputs)
-        return F.normalize(outputs.pooler_output, dim=-1)
+
+        if hasattr(outputs, "pooler_output"):
+            embeddings = outputs.pooler_output
+        else:
+            embeddings = outputs
+
+        return F.normalize(embeddings, dim=-1)
 
     @torch.no_grad()
     def compute_similarity(
