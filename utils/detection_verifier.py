@@ -20,6 +20,7 @@ import torch.nn.functional as F
 from PIL import Image
 
 from utils.clip_scorer import get_clip_scorer
+from utils.logger_utils import debug_print
 
 # ---------------------------------------------------------------------------
 # Competing label pools used for semantic comparison
@@ -205,15 +206,15 @@ def _print_verification_debug(
     status = "✓" if keep else "✗"
     verdict = "verified" if keep else "rejected false detection"
 
-    print(f"\n[verification]")
-    print(f"  YOLO:")
-    print(f"    {label} ({yolo_conf:.2f})")
-    print(f"  CLIP:")
-    print(f"    {label}: {pred_sim:.2f}")
+    debug_print(f"\n[verification]")
+    debug_print(f"  YOLO:")
+    debug_print(f"    {label} ({yolo_conf:.2f})")
+    debug_print(f"  CLIP:")
+    debug_print(f"    {label}: {pred_sim:.2f}")
     for comp_lbl, comp_sim in top3:
-        print(f"    {comp_lbl}: {comp_sim:.2f}")
-    print(f"  Trust score: {trust_score:.3f}")
-    print(f"  Decision: {status} {verdict}")
+        debug_print(f"    {comp_lbl}: {comp_sim:.2f}")
+    debug_print(f"  Trust score: {trust_score:.3f}")
+    debug_print(f"  Decision: {status} {verdict}")
 
 
 def verify_detections(
@@ -267,7 +268,7 @@ def verify_detections(
 
         if x2 <= x1 or y2 <= y1:
             if debug:
-                print(f"\n[verification]  ✗ {label}: invalid box, rejected")
+                debug_print(f"\n[verification]  \u2717 {label}: invalid box, rejected")
             rejected.append(det)
             continue
 
@@ -303,15 +304,15 @@ def verify_detections(
             rejected.append(det)
 
     if debug:
-        print(f"\n[verification] {'=' * 40}")
-        print(f"[verification]  ✓ verified: {len(verified)} detections")
+        debug_print(f"\n[verification] {'=' * 40}")
+        debug_print(f"[verification]  \u2713 verified: {len(verified)} detections")
         for d in verified:
-            print(f"    ✓ {d['label']} (yolo={d['score']:.2f}, clip={d.get('clip_similarity', 0):.2f}, "
-                  f"trust={d.get('verification_score', 0):.2f})")
-        print(f"[verification]  ✗ rejected: {len(rejected)} detections")
+            debug_print(f"    \u2713 {d['label']} (yolo={d['score']:.2f}, clip={d.get('clip_similarity', 0):.2f}, "
+                        f"trust={d.get('verification_score', 0):.2f})")
+        debug_print(f"[verification]  \u2717 rejected: {len(rejected)} detections")
         for d in rejected:
-            print(f"    ✗ {d['label']} (yolo={d['score']:.2f}, clip={d.get('clip_similarity', 0):.2f}, "
-                  f"trust={d.get('verification_score', 0):.2f})")
-        print(f"[verification] {'=' * 40}")
+            debug_print(f"    \u2717 {d['label']} (yolo={d['score']:.2f}, clip={d.get('clip_similarity', 0):.2f}, "
+                        f"trust={d.get('verification_score', 0):.2f})")
+        debug_print(f"[verification] {'=' * 40}")
 
     return verified

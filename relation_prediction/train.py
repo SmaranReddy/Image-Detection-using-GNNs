@@ -28,7 +28,8 @@ from torch.utils.data import DataLoader, random_split
 
 from .model import RelationMLP
 from .relation_transformer import RelationTransformer
-from .vg_dataset import VGRelationshipDataset, Vocab, GEO_DIM, POSE_FEATURE_DIM, UNION_FEATURE_DIM
+from .vg_dataset import VGRelationshipDataset, Vocab, GEO_DIM, POSE_FEATURE_DIM, POSE_OBJECT_FEATURE_DIM, UNION_FEATURE_DIM
+from utils.logger_utils import debug_print
 
 
 # ---------------------------------------------------------------------------
@@ -54,8 +55,13 @@ REQUIRE_VISUAL  = False
 VG_IMAGE_DIR    = None
 CLIP_CACHE_PATH = None
 USE_POSE        = False
+USE_POSE_OBJECT = False
 USE_UNION       = False
 MODEL_TYPE      = "mlp"
+
+# Geometry modality dropout (Phase 1 training improvement)
+ENABLE_GEOMETRY_DROPOUT = False
+GEOMETRY_DROPOUT_PROB   = 0.3
 
 
 # ---------------------------------------------------------------------------
@@ -82,8 +88,11 @@ def train_relation_model(
     vg_image_dir: Optional[str] = VG_IMAGE_DIR,
     clip_cache_path: Optional[str] = CLIP_CACHE_PATH,
     use_pose: bool = USE_POSE,
+    use_pose_object: bool = USE_POSE_OBJECT,
     use_union: bool = USE_UNION,
     model_type: str = MODEL_TYPE,
+    enable_geometry_dropout: bool = ENABLE_GEOMETRY_DROPOUT,
+    geometry_dropout_prob: float = GEOMETRY_DROPOUT_PROB,
 ) -> nn.Module:
     torch.manual_seed(seed)
     random.seed(seed)
@@ -100,8 +109,12 @@ def train_relation_model(
         mode_parts.append('geometry-only')
     if use_pose:
         mode_parts.append('pose')
+    if use_pose_object:
+        mode_parts.append('pose_object')
     if use_union:
         mode_parts.append('union')
+    if enable_geometry_dropout:
+        mode_parts.append(f'geo_dropout({geometry_dropout_prob})')
     mode_str = '+'.join(mode_parts) if mode_parts else 'geometry-only'
     print(f"[relation_prediction] mode: {mode_str}")
 
@@ -128,6 +141,7 @@ def train_relation_model(
         clip_cache_path=clip_cache_path,
         require_visual=require_visual,
         use_pose=use_pose,
+        use_pose_object=use_pose_object,
         use_union=use_union,
     )
     label_vocab = full_ds.label_vocab
@@ -138,7 +152,7 @@ def train_relation_model(
     print(f"  pred vocab   : {len(pred_vocab):,}")
 
     # Pre-training sanity validation: interaction feature coverage
-    if use_union or use_pose:
+    if use_union or use_pose or use_pose_object:
         print(f"\n{'=' * 60}")
         print("  INTERACTION FEATURE SANITY CHECK")
         print(f"{'=' * 60}")
@@ -162,6 +176,13 @@ def train_relation_model(
             print(f"  Mean pose norm:         {p_mean_norm:.4f}")
             if p_pct < 50.0:
                 print(f"  [WARNING] Pose coverage below 50%!")
+        if use_pose_object:
+            po_nz = sum(1 for f in full_ds.pose_object_feats if f.norm().item() > 0)
+            po_total = len(full_ds.pose_object_feats)
+            po_pct = 100.0 * po_nz / max(po_total, 1)
+            po_mean_norm = sum(f.norm().item() for f in full_ds.pose_object_feats) / max(po_total, 1)
+            print(f"  Pose-object feature coverage: {po_nz}/{po_total} = {po_pct:.1f}%")
+            print(f"  Mean pose-object norm:        {po_mean_norm:.4f}")
         print(f"{'=' * 60}\n")
 
     # Pre-training validation: verify dataset purity
@@ -211,10 +232,10 @@ def train_relation_model(
     )
 
     def _collate(batch):
-        """Collate function that handles optional visual, union, and pose features."""
+        """Collate function that handles optional visual, union, pose, and pose_object features."""
         subj_idxs, obj_idxs, geos, preds = [], [], [], []
         subj_feats, obj_feats = [], []
-        union_feats, pose_feats = [], []
+        union_feats, pose_feats, pose_object_feats = [], [], []
 
         for item in batch:
             subj_idxs.append(item[0])
@@ -229,6 +250,8 @@ def train_relation_model(
                     union_feats.append(item[idx]); idx += 1
                 if use_pose:
                     pose_feats.append(item[idx]); idx += 1
+                if use_pose_object:
+                    pose_object_feats.append(item[idx]); idx += 1
 
         result = (
             torch.stack(subj_idxs),
@@ -242,6 +265,8 @@ def train_relation_model(
             result = result + (torch.stack(union_feats),)
         if pose_feats:
             result = result + (torch.stack(pose_feats),)
+        if pose_object_feats:
+            result = result + (torch.stack(pose_object_feats),)
         return result
 
     train_loader = DataLoader(
@@ -258,6 +283,7 @@ def train_relation_model(
     # --- Model ---------------------------------------------------------
     clip_dim = full_ds.CLIP_DIM if use_visual else 0
     pose_dim = POSE_FEATURE_DIM if use_pose else 0
+    pose_object_dim = POSE_OBJECT_FEATURE_DIM if use_pose_object else 0
     union_dim = UNION_FEATURE_DIM if use_union else 0
 
     if model_type == "transformer":
@@ -267,6 +293,7 @@ def train_relation_model(
             embed_dim=embed_dim,
             clip_dim=clip_dim,
             pose_dim=pose_dim,
+            pose_object_dim=pose_object_dim,
             union_dim=union_dim,
             dropout=dropout if dropout < 0.3 else 0.1,
         ).to(device)
@@ -280,9 +307,10 @@ def train_relation_model(
             dropout=dropout,
             clip_dim=clip_dim,
             pose_dim=pose_dim,
+            pose_object_dim=pose_object_dim,
             union_dim=union_dim,
         ).to(device)
-        input_dim = 2 * embed_dim + GEO_DIM + 2 * clip_dim + union_dim + pose_dim
+        input_dim = 2 * embed_dim + GEO_DIM + 2 * clip_dim + union_dim + pose_dim + pose_object_dim
 
     print(f"  input dim    : {input_dim}")
     print(f"  model type   : {model_type}")
@@ -299,13 +327,22 @@ def train_relation_model(
     has_visual = use_visual
     has_union = use_union
     has_pose = use_pose
+    has_pose_object = use_pose_object
+    has_geo_dropout = enable_geometry_dropout
     _first_batch_checked = False
+    _geo_dropout_logged = False
+
+    # Geometry dropout statistics
+    geo_dropout_total_batches = 0
+    geo_dropout_dropped = 0
 
     for epoch in range(1, epochs + 1):
         model.train()
         train_loss = 0.0
         train_correct = 0
         train_total   = 0
+        epoch_geo_dropped = 0
+        epoch_geo_total = 0
 
         for batch in train_loader:
             if not _first_batch_checked:
@@ -327,6 +364,10 @@ def train_relation_model(
                     print(f"  pose_feat.shape  = {batch[bi].shape}, "
                           f"norm sample: {batch[bi][0].norm().item():.4f}")
                     bi += 1
+                if has_pose_object:
+                    print(f"  pose_object_feat.shape  = {batch[bi].shape}, "
+                          f"norm sample: {batch[bi][0].norm().item():.4f}")
+                    bi += 1
                 print(f"{'=' * 60}\n")
                 _first_batch_checked = True
             subj = batch[0].to(device)
@@ -343,10 +384,25 @@ def train_relation_model(
             union_feat = batch[idx].to(device) if has_union else None
             idx += 1 if has_union else 0
             pose_feat  = batch[idx].to(device) if has_pose else None
+            idx += 1 if has_pose else 0
+            pose_object_feat = batch[idx].to(device) if has_pose_object else None
+
+            # ── Geometry modality dropout ────────────────────────
+            geo_dropout_kwargs = {}
+            geo_was_dropped = False
+            if has_geo_dropout and model.training:
+                geo_dropout_kwargs["geo_dropout_prob"] = geometry_dropout_prob
+                if torch.rand(1).item() < geometry_dropout_prob:
+                    geo_was_dropped = True
+                    if not _geo_dropout_logged:
+                        print("[modality_dropout] geometry dropped")
+                        _geo_dropout_logged = True
 
             logits = model(subj, obj, geo,
                            subj_feat=subj_feat, obj_feat=obj_feat,
-                           union_feat=union_feat, pose_feat=pose_feat)
+                           union_feat=union_feat, pose_feat=pose_feat,
+                           pose_object_feat=pose_object_feat,
+                           **geo_dropout_kwargs)
 
             loss = criterion(logits, pred)
             loss.backward()
@@ -358,7 +414,16 @@ def train_relation_model(
             train_correct += (preds == pred).sum().item()
             train_total   += pred.size(0)
 
+            geo_dropout_total_batches += 1
+            if geo_was_dropped:
+                geo_dropout_dropped += 1
+
         scheduler.step()
+
+        if has_geo_dropout:
+            drop_pct = 100.0 * geo_dropout_dropped / max(geo_dropout_total_batches, 1)
+            print(f"  [geometry_dropout] dropped {geo_dropout_dropped}/{geo_dropout_total_batches} "
+                  f"batches ({drop_pct:.1f}%)")
 
         # --- Validation ------------------------------------------------
         model.eval()
@@ -378,10 +443,13 @@ def train_relation_model(
                 union_feat = batch[idx].to(device) if has_union else None
                 idx += 1 if has_union else 0
                 pose_feat  = batch[idx].to(device) if has_pose else None
+                idx += 1 if has_pose else 0
+                pose_object_feat = batch[idx].to(device) if has_pose_object else None
 
                 logits = model(subj, obj, geo,
                                subj_feat=subj_feat, obj_feat=obj_feat,
-                               union_feat=union_feat, pose_feat=pose_feat)
+                               union_feat=union_feat, pose_feat=pose_feat,
+                               pose_object_feat=pose_object_feat)
 
                 preds  = logits.argmax(dim=-1)
                 val_correct += (preds == pred).sum().item()
@@ -424,6 +492,7 @@ def _save(model, label_vocab, pred_vocab, ckpt_dir, dataset=None, mode_label="un
             "embed_dim": model.embed_dim,
             "clip_dim": model.clip_dim,
             "pose_dim": model.pose_dim,
+            "pose_object_dim": getattr(model, "pose_object_dim", 0),
             "union_dim": model.union_dim,
         }
     else:
@@ -434,6 +503,7 @@ def _save(model, label_vocab, pred_vocab, ckpt_dir, dataset=None, mode_label="un
             "embed_dim": model.label_emb.embedding_dim,
             "clip_dim": model.clip_dim,
             "pose_dim": model.pose_dim,
+            "pose_object_dim": getattr(model, "pose_object_dim", 0),
             "union_dim": model.union_dim,
         }
         # Infer hidden_dims from state dict — iterate over mlp.{i}.weight
@@ -515,10 +585,16 @@ if __name__ == "__main__":
                         help="Path to CLIP embedding cache (.pkl)")
     parser.add_argument("--use-pose",  action="store_true", default=False,
                         help="Enable pose features (requires MediaPipe)")
+    parser.add_argument("--use-pose-object", action="store_true", default=False,
+                        help="Enable pose-object interaction features (requires --use-pose)")
     parser.add_argument("--use-union", action="store_true", default=False,
                         help="Enable union-region CLIP features")
     parser.add_argument("--model", type=str, default=MODEL_TYPE, choices=["mlp", "transformer"],
                         help="Model architecture (mlp or transformer)")
+    parser.add_argument("--enable-geometry-dropout", action="store_true", default=False,
+                        help="Enable geometry modality dropout during training")
+    parser.add_argument("--geometry-dropout-prob", type=float, default=GEOMETRY_DROPOUT_PROB,
+                        help=f"Geometry dropout probability (default: {GEOMETRY_DROPOUT_PROB})")
     args = parser.parse_args()
 
     train_relation_model(
@@ -534,6 +610,9 @@ if __name__ == "__main__":
         vg_image_dir=args.vg_image_dir,
         clip_cache_path=args.clip_cache_path,
         use_pose=args.use_pose,
+        use_pose_object=args.use_pose_object,
         use_union=args.use_union,
         model_type=args.model,
+        enable_geometry_dropout=args.enable_geometry_dropout,
+        geometry_dropout_prob=args.geometry_dropout_prob,
     )

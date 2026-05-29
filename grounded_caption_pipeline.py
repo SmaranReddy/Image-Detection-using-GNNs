@@ -74,6 +74,14 @@ from utils.eval_debug import (
     generate_final_report,
     compute_refined_prior_adjustment,
 )
+from utils.logger_utils import (
+    DEBUG,
+    debug_print,
+    section,
+    print_clean_summary,
+    print_dataset_summary,
+    set_debug,
+)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -92,9 +100,10 @@ def verify_relation_model() -> Dict:
     Returns:
         Dict with model info: input_dim, clip_dim, num_labels, num_predicates, device
     """
-    print("=" * 60)
-    print("  STEP 1 — LOADING TRAINED RELATION MODEL")
-    print("=" * 60)
+    print("[TRACE] entered verify_relation_model")
+    debug_print("=" * 60)
+    debug_print("  LOADING TRAINED RELATION MODEL")
+    debug_print("=" * 60)
 
     rel_predict.load_relation_model(CHECKPOINT_DIR)
 
@@ -111,14 +120,14 @@ def verify_relation_model() -> Dict:
         "visual_mode": rel_predict._model_clip_dim > 0,
     }
 
-    print(f"  Model loaded successfully")
-    print(f"  Input dimension:     {info['input_dim']}")
-    print(f"  CLIP dimension:      {info['clip_dim']}")
-    print(f"  Label vocab:         {info['num_labels']} classes")
-    print(f"  Predicate vocab:     {info['num_predicates']} predicates")
-    print(f"  Visual mode:         {info['visual_mode']}")
-    print(f"  Device:              {info['device']}")
-    print(f"  Embed dim:           {info['embed_dim']}")
+    debug_print(f"  Model loaded successfully")
+    debug_print(f"  Input dimension:     {info['input_dim']}")
+    debug_print(f"  CLIP dimension:      {info['clip_dim']}")
+    debug_print(f"  Label vocab:         {info['num_labels']} classes")
+    debug_print(f"  Predicate vocab:     {info['num_predicates']} predicates")
+    debug_print(f"  Visual mode:         {info['visual_mode']}")
+    debug_print(f"  Device:              {info['device']}")
+    debug_print(f"  Embed dim:           {info['embed_dim']}")
 
     assert info["input_dim"] == 1669, (
         f"Expected input_dim=1669 but got {info['input_dim']}"
@@ -170,11 +179,12 @@ def run_pure_visual_inference(
     Returns:
         (filtered_relations, raw_predictions_debug)
     """
-    print(f"\n  STEP 2 — PRECISION RELATION INFERENCE")
-    print(f"  {len(detections)} detections, top_k={top_k}, T={temperature}")
-    print(f"  Precision: MIN_SEMANTIC_SCORE={MIN_SEMANTIC_SCORE}, "
-          f"WEAK_SPATIAL_THRESHOLD={WEAK_SPATIAL_THRESHOLD}, "
-          f"REJECT_INANIMATE_SPATIAL={REJECT_INANIMATE_SPATIAL}")
+    print("[TRACE] entered run_pure_visual_inference")
+    debug_print(f"\n  PRECISION RELATION INFERENCE")
+    debug_print(f"  {len(detections)} detections, top_k={top_k}, T={temperature}")
+    debug_print(f"  Precision: MIN_SEMANTIC_SCORE={MIN_SEMANTIC_SCORE}, "
+                f"WEAK_SPATIAL_THRESHOLD={WEAK_SPATIAL_THRESHOLD}, "
+                f"REJECT_INANIMATE_SPATIAL={REJECT_INANIMATE_SPATIAL}")
 
     relations, raw_debug = rel_predict.infer_relationships_semantic(
         detections,
@@ -186,41 +196,42 @@ def run_pure_visual_inference(
     )
 
     if not relations:
-        print("  No relations after precision filtering.")
+        print("[EARLY RETURN] run_pure_visual_inference: no relations after filtering")
+        debug_print("  No relations after precision filtering.")
         return [], raw_debug
 
-    print(f"\n  Relations ({len(relations)}):")
+    debug_print(f"\n  Relations ({len(relations)}):")
     for r in relations:
-        marker = " ★" if r["predicate"] in SEMANTIC_PREDICATES else ""
+        marker = " \u2605" if r["predicate"] in SEMANTIC_PREDICATES else ""
         pri = r.get("prior_adjustment", 0)
         adj = r.get("adjusted_confidence", r["confidence"])
-        print(f"    {r['subject']} {r['predicate']} {r['object']} "
-              f"(calib={r['confidence']:.3f}, adj={adj:.3f}, prior={pri:+.3f}){marker}")
+        debug_print(f"    {r['subject']} {r['predicate']} {r['object']} "
+                    f"(calib={r['confidence']:.3f}, adj={adj:.3f}, prior={pri:+.3f}){marker}")
 
-    # Feature contribution analysis
+    # Feature contribution analysis (always computed, only printed in DEBUG)
     try:
         feature_norms = _get_feature_group_norms(rel_predict._model)
         if feature_norms:
             total_fn = sum(feature_norms.values()) or 1.0
-            print(f"\n  ─── FEATURE GROUP CONTRIBUTION ───")
+            debug_print(f"\n  \u2500\u2500\u2500 FEATURE GROUP CONTRIBUTION \u2500\u2500\u2500")
             for name, norm in sorted(feature_norms.items(), key=lambda x: -x[1]):
                 pct = norm / total_fn * 100
-                print(f"    {name:15s}: {norm:8.4f}  ({pct:5.1f}%)")
+                debug_print(f"    {name:15s}: {norm:8.4f}  ({pct:5.1f}%)")
             clip_pct = (feature_norms.get("subj_clip", 0) + feature_norms.get("obj_clip", 0)) / total_fn * 100
             geo_pct = feature_norms.get("geo", 0) / total_fn * 100
-            print(f"    CLIP total:      {clip_pct:5.1f}%")
-            print(f"    Geometry:        {geo_pct:5.1f}%")
+            debug_print(f"    CLIP total:      {clip_pct:5.1f}%")
+            debug_print(f"    Geometry:        {geo_pct:5.1f}%")
     except Exception:
         pass
 
-    # Quality evaluation
+    # Quality evaluation (always computed, only printed in DEBUG)
     quality = evaluate_relation_quality(relations, raw_debug)
-    print(f"\n  ─── RELATION QUALITY ───")
-    print(f"    Semantic precision:  {quality['semantic_precision']:.0%} "
-          f"({quality['semantic_relations']}/{quality['total_relations']})")
-    print(f"    Animate subjects:    {quality['animate_subject_rate']:.0%}")
-    print(f"    Reversed direction:  {quality['reversed_direction_rate']:.0%}")
-    print(f"    Weak spatial:        {quality['weak_spatial_rate']:.0%}")
+    debug_print(f"\n  \u2500\u2500\u2500 RELATION QUALITY \u2500\u2500\u2500")
+    debug_print(f"    Semantic precision:  {quality['semantic_precision']:.0%} "
+                f"({quality['semantic_relations']}/{quality['total_relations']})")
+    debug_print(f"    Animate subjects:    {quality['animate_subject_rate']:.0%}")
+    debug_print(f"    Reversed direction:  {quality['reversed_direction_rate']:.0%}")
+    debug_print(f"    Weak spatial:        {quality['weak_spatial_rate']:.0%}")
 
     return relations, raw_debug
 
@@ -243,8 +254,9 @@ def build_semantic_prompt_step(
     Returns:
         (prompt_string, verbalized_relations_list)
     """
-    print(f"\n  STEP 3 — BUILDING PRECISION-GROUNDED PROMPT")
-    print(f"  {len(detections)} objects, {len(relations)} high-value relations")
+    print("[TRACE] entered build_semantic_prompt_step")
+    debug_print(f"\n  BUILDING PRECISION-GROUNDED PROMPT")
+    debug_print(f"  {len(detections)} objects, {len(relations)} high-value relations")
 
     verbalized = []
     for r in relations:
@@ -256,13 +268,13 @@ def build_semantic_prompt_step(
 
     prompt = build_semantic_prompt(detections, verbalized)
 
-    print(f"\n  Verbalized relations:")
+    debug_print(f"\n  Verbalized relations:")
     for v in verbalized:
-        print(f"    - {v}")
+        debug_print(f"    - {v}")
 
-    print(f"\n  Prompt ({len(prompt)} chars):")
+    debug_print(f"\n  Prompt ({len(prompt)} chars):")
     for line in prompt.split("\n"):
-        print(f"    {line}")
+        debug_print(f"    {line}")
 
     return prompt, verbalized
 
@@ -284,7 +296,8 @@ def generate_grounded_caption(
     Returns:
         (raw_caption, gated_caption, prompt, verbalized_relations)
     """
-    print(f"\n  STEP 4 — GENERATING SEMANTIC CAPTION + RELATION CORRECTION")
+    print("[TRACE] entered generate_grounded_caption")
+    debug_print(f"\n  GENERATING SEMANTIC CAPTION + RELATION CORRECTION")
 
     raw, gated, prompt, verbalized = generate_blip_semantic_caption(
         image,
@@ -294,10 +307,10 @@ def generate_grounded_caption(
         confidence_threshold=0.5,
     )
 
-    print(f"  Raw caption:    {raw}")
-    print(f"  Gated caption:  {gated}")
+    debug_print(f"  Raw caption:    {raw}")
+    debug_print(f"  Gated caption:  {gated}")
     if raw != gated:
-        print(f"  ✓ BLIP action corrected using grounded relations")
+        debug_print(f"  \u2713 BLIP action corrected using grounded relations")
 
     return raw, gated, prompt, verbalized
 
@@ -326,10 +339,11 @@ def run_grounded_pipeline(
 
     Returns a result dict with all intermediate outputs for visibility.
     """
-    print(f"\n{'=' * 70}")
-    print(f"  SEMANTIC GROUNDED CAPTION PIPELINE")
-    print(f"  Image: {image_path}")
-    print(f"{'=' * 70}")
+    print("[TRACE] entered run_grounded_pipeline")
+    debug_print(f"\n{'=' * 70}")
+    debug_print(f"  SEMANTIC GROUNDED CAPTION PIPELINE")
+    debug_print(f"  Image: {image_path}")
+    debug_print(f"{'=' * 70}")
 
     result: Dict = {
         "image_path": image_path,
@@ -342,12 +356,12 @@ def run_grounded_pipeline(
     image = Image.open(image_path).convert("RGB")
     img_w, img_h = image.size
     result["image_size"] = (img_w, img_h)
-    print(f"  Image size: {img_w}x{img_h}")
+    debug_print(f"  Image size: {img_w}x{img_h}")
 
     # ── STEP 1 — YOLO Detection ──────────────────────────────────
-    print(f"\n{'=' * 60}")
-    print(f"  STEP 1 — YOLO DETECTION")
-    print(f"{'=' * 60}")
+    debug_print(f"\n{'=' * 60}")
+    debug_print(f"  YOLO DETECTION")
+    debug_print(f"{'=' * 60}")
     yolo_model = load_model()
     raw = run_inference(yolo_model, image)
     raw_detections = format_detections(raw, conf_thres=0.5)
@@ -355,27 +369,28 @@ def run_grounded_pipeline(
         {"label": d["label"], "box": d["box"], "score": round(d["score"], 3)}
         for d in raw_detections
     ]
-    print(f"  {len(raw_detections)} objects detected (raw):")
+    debug_print(f"  {len(raw_detections)} objects detected (raw):")
     for d in result["raw_detections"]:
-        print(f"    {d['label']} (conf={d['score']:.3f})")
+        debug_print(f"    {d['label']} (conf={d['score']:.3f})")
 
     # ── STEP 1b — CLIP Semantic Verification ─────────────────────
-    print(f"\n{'=' * 60}")
-    print(f"  STEP 1b — CLIP VERIFICATION")
-    print(f"{'=' * 60}")
-    detections = verify_detections(raw_detections, image, debug=True)
+    debug_print(f"\n{'=' * 60}")
+    debug_print(f"  CLIP VERIFICATION")
+    debug_print(f"{'=' * 60}")
+    detections = verify_detections(raw_detections, image, debug=DEBUG)
     result["detections"] = [
         {"label": d["label"], "box": d["box"], "score": round(d["score"], 3),
          "verification_score": round(d.get("verification_score", 0), 3),
          "clip_similarity": round(d.get("clip_similarity", 0), 3)}
         for d in detections
     ]
-    print(f"  {len(detections)} objects verified:")
+    debug_print(f"  {len(detections)} objects verified:")
     for d in result["detections"]:
-        print(f"    ✓ {d['label']} (yolo={d['score']:.2f}, clip={d['clip_similarity']:.2f}, "
-              f"trust={d['verification_score']:.2f})")
+        debug_print(f"    \u2713 {d['label']} (yolo={d['score']:.2f}, clip={d['clip_similarity']:.2f}, "
+                    f"trust={d['verification_score']:.2f})")
 
     if len(detections) < 2:
+        print("[EARLY RETURN] reason=less than 2 detections (cannot infer relations)")
         result["relations"] = []
         result["raw_predictions"] = []
         result["verbalized_relations"] = []
@@ -394,6 +409,7 @@ def run_grounded_pipeline(
     result["raw_predictions"] = raw_predictions
 
     if not relations:
+        print("[EARLY RETURN] reason=no relations after inference")
         result["verbalized_relations"] = []
         result["semantic_prompt"] = ""
         result["caption"] = "No semantic interactions detected."
@@ -425,30 +441,30 @@ def run_grounded_pipeline(
         result["vanilla_caption"] = vanilla
         result["compare_baseline"] = True
 
-    # ── STEP 7 — Debug summary ──────────────────────────────────
+    # ── Debug summary (only in DEBUG mode) ──────────────────────
     semantic_count = sum(1 for r in relations if r["predicate"] in SEMANTIC_PREDICATES)
-    print(f"\n{'=' * 60}")
-    print(f"  PRECISION FILTER SUMMARY")
-    print(f"{'=' * 60}")
-    print(f"  Pairs evaluated:       {len(raw_predictions)}")
-    print(f"  Final relations:       {len(relations)}")
-    print(f"  Semantic predicates:   {semantic_count}/{len(relations)}")
-    print(f"  Spatial predicates:    {len(relations) - semantic_count}/{len(relations)}")
+    debug_print(f"\n{'=' * 60}")
+    debug_print(f"  PRECISION FILTER SUMMARY")
+    debug_print(f"{'=' * 60}")
+    debug_print(f"  Pairs evaluated:       {len(raw_predictions)}")
+    debug_print(f"  Final relations:       {len(relations)}")
+    debug_print(f"  Semantic predicates:   {semantic_count}/{len(relations)}")
+    debug_print(f"  Spatial predicates:    {len(relations) - semantic_count}/{len(relations)}")
     for r in relations:
         sem_marker = " \u2605" if r["predicate"] in SEMANTIC_PREDICATES else ""
         adj = r.get("adjusted_confidence", r["confidence"])
         pri = r.get("prior_adjustment", 0.0)
-        print(f"    {r['subject']} {r['predicate']} {r['object']} "
-              f"(calib={r['confidence']:.3f}, final={adj:.3f}, "
-              f"prior={pri:+.3f}){sem_marker}")
-    print(f"  Verbalized:")
+        debug_print(f"    {r['subject']} {r['predicate']} {r['object']} "
+                    f"(calib={r['confidence']:.3f}, final={adj:.3f}, "
+                    f"prior={pri:+.3f}){sem_marker}")
+    debug_print(f"  Verbalized:")
     for v in verbalized:
-        print(f"    - {v}")
-    print(f"  Raw BLIP caption:  {raw_caption}")
-    print(f"  Gated caption:     {gated_caption}")
+        debug_print(f"    - {v}")
+    debug_print(f"  Raw BLIP caption:  {raw_caption}")
+    debug_print(f"  Gated caption:     {gated_caption}")
 
     if raw_caption != gated_caption:
-        print(f"  [gating] modified caption (object repair or relation correction)")
+        debug_print(f"  [gating] modified caption (object repair or relation correction)")
 
     return result
 
@@ -503,7 +519,7 @@ def save_debug_visualization(
     draw.text((10, image.size[1] - 60), f"Caption: {caption}", fill="white", font=font)
 
     image.save(output_path)
-    print(f"  Debug visualization saved to: {output_path}")
+    debug_print(f"  Debug visualization saved to: {output_path}")
 
 
 # ---------------------------------------------------------------------------
@@ -532,9 +548,9 @@ def run_qualitative_tests(
     - BLIP captions reflect predicted relations
     - Hallucinated objects reduce
     """
-    print(f"\n{'=' * 70}")
-    print(f"  STEP 7 — QUALITATIVE TESTS")
-    print(f"{'=' * 70}")
+    debug_print(f"\n{'=' * 70}")
+    debug_print(f"  QUALITATIVE TESTS")
+    debug_print(f"{'=' * 70}")
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -545,7 +561,7 @@ def run_qualitative_tests(
         if img_path.suffix.lower() not in {".jpg", ".jpeg", ".png", ".webp"}:
             continue
 
-        print(f"\n  --- Testing: {img_path.name} ---")
+        debug_print(f"\n  --- Testing: {img_path.name} ---")
         result = run_grounded_pipeline(str(img_path))
         results.append(result)
 
@@ -567,8 +583,8 @@ def run_qualitative_tests(
     with open(output_path, "w") as f:
         json.dump(serializable, f, indent=2)
 
-    print(f"\n  Qualitative results saved to: {output_path}")
-    print(f"  Total images tested: {len(results)}")
+    debug_print(f"\n  Qualitative results saved to: {output_path}")
+    debug_print(f"  Total images tested: {len(results)}")
 
     return {"results": results, "output_path": output_path}
 
@@ -598,9 +614,9 @@ def run_semantic_tests(
     - prompts contain ONLY grounded semantic interactions
     - BLIP captions explicitly reflect grounded interactions
     """
-    print(f"\n{'=' * 70}")
-    print(f"  STEP 8 — SEMANTIC PRECISION TESTS")
-    print(f"{'=' * 70}")
+    debug_print(f"\n{'=' * 70}")
+    debug_print(f"  SEMANTIC PRECISION TESTS")
+    debug_print(f"{'=' * 70}")
 
     os.makedirs(output_dir, exist_ok=True)
     image_paths = sorted(Path(image_dir).iterdir())
@@ -610,7 +626,7 @@ def run_semantic_tests(
         if img_path.suffix.lower() not in {".jpg", ".jpeg", ".png", ".webp"}:
             continue
 
-        print(f"\n  --- Testing: {img_path.name} ---")
+        debug_print(f"\n  --- Testing: {img_path.name} ---")
         result = run_grounded_pipeline(str(img_path), top_k_relations=3)
 
         # Check for semantic predicates
@@ -623,11 +639,11 @@ def run_semantic_tests(
         )
         verbalized = result.get("verbalized_relations", [])
 
-        print(f"\n  Semantic check:")
-        print(f"    Semantic predicates in relations: {semantic_count}/{len(relations)}")
-        print(f"    Has semantic interaction:          {has_semantic}")
-        print(f"    Verbalized:                        {verbalized}")
-        print(f"    Caption:                           {result['caption']}")
+        debug_print(f"\n  Semantic check:")
+        debug_print(f"    Semantic predicates in relations: {semantic_count}/{len(relations)}")
+        debug_print(f"    Has semantic interaction:          {has_semantic}")
+        debug_print(f"    Verbalized:                        {verbalized}")
+        debug_print(f"    Caption:                           {result['caption']}")
 
         result["test_metadata"] = {
             "has_semantic": has_semantic,
@@ -642,16 +658,16 @@ def run_semantic_tests(
     total_sem_preds = sum(r.get("test_metadata", {}).get("semantic_count", 0) for r in results)
     total_relations = sum(r.get("test_metadata", {}).get("total_relations", 0) for r in results)
 
-    print(f"\n{'=' * 70}")
-    print(f"  SEMANTIC PRECISION SUMMARY")
-    print(f"{'=' * 70}")
-    print(f"  Images tested:              {total}")
-    print(f"  Images with semantic preds: {with_semantic} ({100*with_semantic/max(total,1):.0f}%)")
-    print(f"  Total relations:            {total_relations}")
-    print(f"  Total semantic preds:       {total_sem_preds}")
-    print(f"  Semantic ratio:             {total_sem_preds/max(total_relations,1):.2f}")
-    print(f"  (Target: semantic ratio > 0.8 = precision-oriented)")
-    print(f"  (Lower total relations = higher precision filter impact)")
+    debug_print(f"\n{'=' * 70}")
+    debug_print(f"  SEMANTIC PRECISION SUMMARY")
+    debug_print(f"{'=' * 70}")
+    debug_print(f"  Images tested:              {total}")
+    debug_print(f"  Images with semantic preds: {with_semantic} ({100*with_semantic/max(total,1):.0f}%)")
+    debug_print(f"  Total relations:            {total_relations}")
+    debug_print(f"  Total semantic preds:       {total_sem_preds}")
+    debug_print(f"  Semantic ratio:             {total_sem_preds/max(total_relations,1):.2f}")
+    debug_print(f"  (Target: semantic ratio > 0.8 = precision-oriented)")
+    debug_print(f"  (Lower total relations = higher precision filter impact)")
 
     # Save results
     output_path = os.path.join(output_dir, "semantic_test_results.json")
@@ -670,7 +686,7 @@ def run_semantic_tests(
         })
     with open(output_path, "w") as f:
         json.dump(serializable, f, indent=2)
-    print(f"\n  Results saved to: {output_path}")
+    debug_print(f"\n  Results saved to: {output_path}")
 
     return {"results": results, "output_path": output_path}
 
@@ -692,9 +708,9 @@ def run_baseline_comparison(
 
     Returns dict with all captions and relation predictions.
     """
-    print(f"\n{'=' * 70}")
-    print(f"  STEP 8 — BASELINE COMPARISON")
-    print(f"{'=' * 70}")
+    debug_print(f"\n{'=' * 70}")
+    debug_print(f"  BASELINE COMPARISON")
+    debug_print(f"{'=' * 70}")
 
     os.makedirs(output_dir, exist_ok=True)
     image_name = Path(image_path).stem
@@ -702,21 +718,21 @@ def run_baseline_comparison(
     image = Image.open(image_path).convert("RGB")
 
     # System 1: BLIP-2 baseline
-    print(f"\n  --- System 1: BLIP-2 Baseline ---")
+    debug_print(f"\n  --- System 1: BLIP-2 Baseline ---")
     blip2_caption = generate_blip_baseline(image)
-    print(f"    Caption: {blip2_caption}")
+    debug_print(f"    Caption: {blip2_caption}")
 
     # System 2: BLIP-2 + CLIP reranking
-    print(f"\n  --- System 2: BLIP-2 + CLIP Reranking ---")
+    debug_print(f"\n  --- System 2: BLIP-2 + CLIP Reranking ---")
     candidates = generate_blip_candidates(image, num_candidates=5)
     best_caption, ranked = clip_rerank_captions(image, candidates)
-    print(f"    Best:    {best_caption}")
-    print(f"    Ranked:")
+    debug_print(f"    Best:    {best_caption}")
+    debug_print(f"    Ranked:")
     for cap, score in ranked[:3]:
-        print(f"      {score:.4f}: {cap}")
+        debug_print(f"      {score:.4f}: {cap}")
 
     # System 3: Grounded pipeline
-    print(f"\n  --- System 3: Semantic Grounded Pipeline ---")
+    debug_print(f"\n  --- System 3: Semantic Grounded Pipeline ---")
     grounded_result = run_grounded_pipeline(image_path, top_k_relations=3)
     grounded_caption = grounded_result["caption"]
     relations = grounded_result["relations"]
@@ -745,27 +761,27 @@ def run_baseline_comparison(
     output_path = os.path.join(output_dir, f"{image_name}_comparison.json")
     with open(output_path, "w") as f:
         json.dump(comparison, f, indent=2)
-    print(f"\n  Comparison saved to: {output_path}")
+    debug_print(f"\n  Comparison saved to: {output_path}")
 
     # Print side-by-side
-    print(f"\n  {'=' * 60}")
-    print(f"  SIDE-BY-SIDE COMPARISON")
-    print(f"  {'=' * 60}")
-    print(f"  Image: {image_path}")
-    print(f"  {'─' * 60}")
-    print(f"  BLIP-2 Baseline:")
-    print(f"    {blip2_caption}")
-    print(f"  {'─' * 60}")
-    print(f"  BLIP-2 + CLIP Reranking:")
-    print(f"    {best_caption}")
-    print(f"  {'─' * 60}")
-    print(f"  Grounded Visual-Semantic (ours):")
-    print(f"    {grounded_caption}")
-    print(f"  Relations:")
+    debug_print(f"\n  {'=' * 60}")
+    debug_print(f"  SIDE-BY-SIDE COMPARISON")
+    debug_print(f"  {'=' * 60}")
+    debug_print(f"  Image: {image_path}")
+    debug_print(f"  {'─' * 60}")
+    debug_print(f"  BLIP-2 Baseline:")
+    debug_print(f"    {blip2_caption}")
+    debug_print(f"  {'─' * 60}")
+    debug_print(f"  BLIP-2 + CLIP Reranking:")
+    debug_print(f"    {best_caption}")
+    debug_print(f"  {'─' * 60}")
+    debug_print(f"  Grounded Visual-Semantic (ours):")
+    debug_print(f"    {grounded_caption}")
+    debug_print(f"  Relations:")
     for r in relations:
-        marker = " ★" if r["predicate"] in SEMANTIC_PREDICATES else ""
-        print(f"    {r['subject']} {r['predicate']} {r['object']} "
-              f"(conf={r['confidence']:.3f}){marker}")
+        marker = " \u2605" if r["predicate"] in SEMANTIC_PREDICATES else ""
+        debug_print(f"    {r['subject']} {r['predicate']} {r['object']} "
+                    f"(conf={r['confidence']:.3f}){marker}")
 
     return comparison
 
@@ -786,9 +802,9 @@ def prepare_evaluation_output(
         - prompts.json:     {image_id: grounded prompt}
         - metadata.json:    Per-image metadata with confidence scores
     """
-    print(f"\n{'=' * 70}")
-    print(f"  STEP 9 — EVALUATION READINESS")
-    print(f"{'=' * 70}")
+    debug_print(f"\n{'=' * 70}")
+    debug_print(f"  EVALUATION READINESS")
+    debug_print(f"{'=' * 70}")
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -817,18 +833,18 @@ def prepare_evaluation_output(
     def _save_json(data, path):
         with open(path, "w") as f:
             json.dump(data, f, indent=2, default=str)
-        print(f"  Saved: {path}")
+        debug_print(f"  Saved: {path}")
 
     _save_json(grounded_captions, os.path.join(output_dir, "captions.json"))
     _save_json(grounded_relations, os.path.join(output_dir, "relations.json"))
     _save_json(grounded_prompts, os.path.join(output_dir, "prompts.json"))
     _save_json(metadata, os.path.join(output_dir, "metadata.json"))
 
-    print(f"\n  Evaluation-ready outputs in: {output_dir}")
-    print(f"  Use with:")
-    print(f"    python evaluate.py --mode custom --image-dir <images> --refs <refs>")
-    print(f"    python hallucination_eval.py --image-dir <images>")
-    print(f"    python -c 'from utils.metrics import *; ... evaluate_caption(...)'")
+    debug_print(f"\n  Evaluation-ready outputs in: {output_dir}")
+    debug_print(f"  Use with:")
+    debug_print(f"    python evaluate.py --mode custom --image-dir <images> --refs <refs>")
+    debug_print(f"    python hallucination_eval.py --image-dir <images>")
+    debug_print(f"    python -c 'from utils.metrics import *; ... evaluate_caption(...)'")
 
 
 # ---------------------------------------------------------------------------
@@ -941,7 +957,17 @@ def main():
         help="Phase 7: Use refined object-compatibility priors (soft penalties)",
     )
 
+    # ── Console verbosity ──────────────────────────────────────────────
+    parser.add_argument(
+        "--verbose", action="store_true",
+        help="Enable full debug/research console output (default: only clean summaries)",
+    )
+
     args = parser.parse_args()
+
+    # ── Wire global debug flag ──────────────────────────────────────────
+    if args.verbose:
+        set_debug(True)
 
     # ── Verify model first ──────────────────────────────────────────────
     model_info = verify_relation_model()
@@ -983,9 +1009,9 @@ def main():
     all_comparisons: List[Dict] = []
 
     for img_path in image_paths:
-        print(f"\n{'#' * 70}")
-        print(f"  Processing: {img_path}")
-        print(f"{'#' * 70}")
+        debug_print(f"\n{'#' * 70}")
+        debug_print(f"  Processing: {img_path}")
+        debug_print(f"{'#' * 70}")
 
         img_name = Path(img_path).stem
 
@@ -1014,6 +1040,9 @@ def main():
                 diagnose=args.diagnose,
             )
         all_results.append(result)
+
+        # ── Print clean per-image summary ─────────────────────────────
+        print_clean_summary(result, img_path)
 
         # ── PHASE 1: Visual debug outputs ───────────────────────────────
         if args.debug_full or args.evaluate:
@@ -1151,7 +1180,7 @@ def main():
         })
     with open(str(results_path), "w") as f:
         json.dump(serializable, f, indent=2)
-    print(f"\n  All results saved to: {results_path}")
+    debug_print(f"\n  All results saved to: {results_path}")
 
     # ── Qualitative tests ──────────────────────────────────────────────
     if args.qualitative:
@@ -1181,12 +1210,12 @@ def main():
             feature_norms = _get_feature_group_norms(rel_predict._model)
             if feature_norms:
                 total_fn = sum(feature_norms.values()) or 1.0
-                print(f"\n  ─── FEATURE GROUP CONTRIBUTION ───")
+                debug_print(f"\n  \u2500\u2500\u2500 FEATURE GROUP CONTRIBUTION \u2500\u2500\u2500")
                 for name, norm in sorted(feature_norms.items(), key=lambda x: -x[1]):
                     pct = norm / total_fn * 100
-                    print(f"    {name:15s}: {norm:8.4f}  ({pct:5.1f}%)")
+                    debug_print(f"    {name:15s}: {norm:8.4f}  ({pct:5.1f}%)")
         except Exception as e:
-            print(f"\n  Feature analysis: {e}")
+            debug_print(f"\n  Feature analysis: {e}")
 
     # ── PHASE 3+8+9: Build evaluation outputs ──────────────────────────
     if args.evaluate:
@@ -1233,12 +1262,12 @@ def main():
             output_dir=args.eval_dir,
         )
 
-        print(f"\n{'=' * 70}")
-        print(f"  FULL EVALUATION COMPLETE")
-        print(f"{'=' * 70}")
-        print(f"  Evaluation CSV:  {eval_csv}")
-        print(f"  Failure report:  {fail_path}")
-        print(f"  Final report:    {report_path}")
+        debug_print(f"\n{'=' * 70}")
+        debug_print(f"  FULL EVALUATION COMPLETE")
+        debug_print(f"{'=' * 70}")
+        debug_print(f"  Evaluation CSV:  {eval_csv}")
+        debug_print(f"  Failure report:  {fail_path}")
+        debug_print(f"  Final report:    {report_path}")
 
     # ── Summary ─────────────────────────────────────────────────────────
     total_rels = sum(len(r.get('relations', [])) for r in all_results)
@@ -1249,37 +1278,26 @@ def main():
                     if "animate" not in rel_predict._get_categories(rel.get('subject', ''))
                     and "animate" in rel_predict._get_categories(rel.get('object', '')))
 
-    print(f"\n{'=' * 70}")
-    print(f"  PIPELINE COMPLETE — PRECISION-ORIENTED")
-    print(f"{'=' * 70}")
-    print(f"  Images processed:        {len(all_results)}")
-    print(f"  Model:                   visual-semantic (1669-dim input)")
-    print(f"  Output directory:        {output_root.resolve()}")
-    print(f"  Total relations:         {total_rels}")
-    print(f"  Total semantic preds:    {total_sems}")
-    print(f"  Semantic ratio:          {total_sems/max(total_rels,1):.2f}")
-    print(f"  Animate subject count:   {total_anim}/{total_rels}")
-    print(f"  Reversed direction:      {total_rev}/{total_rels}")
-    print(f"  Precision thresholds:    MIN_SEMANTIC_SCORE={MIN_SEMANTIC_SCORE}, "
-          f"WEAK_SPATIAL_THRESHOLD={WEAK_SPATIAL_THRESHOLD}")
-    print()
+    weak_spatial_rate = 0.0
+    reversed_direction_rate = 0.0
+    if total_rels > 0:
+        quality = evaluate_relation_quality(
+            [r for res in all_results for r in res.get('relations', [])],
+            []
+        )
+        weak_spatial_rate = quality.get('weak_spatial_rate', 0.0)
+        reversed_direction_rate = quality.get('reversed_direction_rate', 0.0)
 
-    # Print summary table
-    header = (f"  {'Image':<30} {'Raw':<5} {'Ver':<5} {'Rej':<5} "
-              f"{'Rel':<5} {'Sem':<5} {'Verbalized':<40} {'Caption':<40}")
-    print(header)
-    print(f"  {'─' * len(header)}")
-    for r in all_results:
-        img_short = Path(r["image_path"]).name[:28]
-        nraw = len(r.get("raw_detections", []))
-        nver = len(r.get("detections", []))
-        nrej = nraw - nver
-        nr = len(r.get("relations", []))
-        ns = sum(1 for rel in r.get("relations", []) if rel.get("predicate") in SEMANTIC_PREDICATES)
-        vr = (r.get("verbalized_relations") or [])
-        vr_preview = vr[0][:38] if vr else "(none)"
-        cap = r.get("caption", "")[:38]
-        print(f"  {img_short:<30} {nraw:<5} {nver:<5} {nrej:<5} {nr:<5} {ns:<5} {vr_preview:<40} {cap:<40}")
+    print_dataset_summary(
+        all_results,
+        total_rels=total_rels,
+        total_sems=total_sems,
+        total_anim=total_anim,
+        total_rev=total_rev,
+        weak_spatial_rate=weak_spatial_rate,
+        reversed_direction_rate=reversed_direction_rate,
+        num_images=len(all_results),
+    )
 
 
 if __name__ == "__main__":

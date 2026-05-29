@@ -20,6 +20,7 @@ from PIL import Image
 from transformers import BlipForConditionalGeneration, BlipProcessor
 
 from utils.relation_corrector import correct_caption_relations
+from utils.logger_utils import debug_print
 
 Detection    = Dict   # {"label": str, "box": List[float], "score": float}
 Relationship = Tuple[str, str, str]   # (subject, relation, object)
@@ -44,7 +45,7 @@ def _load_model() -> None:
     device_str = "cuda" if torch.cuda.is_available() else "cpu"
     dtype      = torch.float16 if device_str == "cuda" else torch.float32
 
-    print(f"[BLIP] Loading {_MODEL_ID} on {device_str} …")
+    debug_print(f"[BLIP] Loading {_MODEL_ID} on {device_str} \u2026")
 
     try:
         _processor = BlipProcessor.from_pretrained(_MODEL_ID)
@@ -54,8 +55,8 @@ def _load_model() -> None:
         _model.to(device_str)
     except Exception as e:
         if device_str == "cuda":
-            print(f"[BLIP] CUDA load failed: {e}")
-            print(f"[BLIP] Falling back to CPU …")
+            debug_print(f"[BLIP] CUDA load failed: {e}")
+            debug_print(f"[BLIP] Falling back to CPU \u2026")
             device_str = "cpu"
             dtype = torch.float32
             torch.cuda.empty_cache()
@@ -70,7 +71,7 @@ def _load_model() -> None:
     _device = torch.device(device_str)
     _model.eval()
     _load_time = time.time() - t0
-    print(f"[BLIP] Model ready in {_load_time:.1f}s on {_device}.")
+    debug_print(f"[BLIP] Model ready in {_load_time:.1f}s on {_device}.")
 
 
 # ---------------------------------------------------------------------------
@@ -257,16 +258,11 @@ def build_semantic_prompt(
     """
     Build a grounded prompt using natural-language interaction descriptions.
 
-    New template (Step 6):
-        Detected scene elements:
-        - a person
-        - a bicycle
+    PART 2 — Interaction-first prompt template:
+        If relations exist, the verified interaction appears FIRST to strongly
+        bias the caption toward the grounded semantic interaction.
 
-        Likely interactions:
-        - the person appears to be riding the bicycle
-
-        Generate a concise factual caption grounded in these interactions.
-        Do not mention objects or actions not supported by the scene.
+        If no relations exist, falls back to object-only captioning.
 
     Args:
         detections:           [{"label": str, ...}, ...]
@@ -276,26 +272,37 @@ def build_semantic_prompt(
         Prompt string for BLIP.
     """
     obj_lines = [
-        f"- {_indefinite_article(d['label'])} {d['label']}"
+        f"- {d['label']}"
         for d in detections
     ]
 
     if verbalized_relations:
         rel_lines = [f"- {vr}" for vr in verbalized_relations]
+        return (
+            "Verified interaction:\n"
+            + "\n".join(rel_lines)
+            + "\n\n"
+            "Verified objects:\n"
+            + "\n".join(obj_lines)
+            + "\n\n"
+            "Generate ONE concise caption focused primarily on the verified interaction.\n"
+            "Rules:\n"
+            "- mention the interaction explicitly\n"
+            "- do not invent unsupported actions\n"
+            "- do not invent unsupported objects\n"
+            "- keep the caption natural and short"
+        )
     else:
-        rel_lines = ["- no clear interactions detected"]
-
-    return (
-        "Detected scene elements:\n"
-        + "\n".join(obj_lines)
-        + "\n\n"
-        "Grounded interactions:\n"
-        + "\n".join(rel_lines)
-        + "\n\n"
-        "Generate a concise factual caption grounded ONLY in these interactions.\n"
-        "Describe the scene based solely on the grounded interactions above.\n"
-        "Do not mention objects, actions, or spatial relationships not listed."
-    )
+        return (
+            "Verified objects:\n"
+            + "\n".join(obj_lines)
+            + "\n\n"
+            "Generate ONE concise caption describing these objects.\n"
+            "Rules:\n"
+            "- do not invent unsupported actions\n"
+            "- do not invent unsupported objects\n"
+            "- keep the caption natural and short"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -418,6 +425,17 @@ _SAFE_CONTEXT_WORDS: frozenset = frozenset({
     "surfaces", "surface", "area", "spot", "section", "portion",
     # image meta references
     "image", "photo", "photograph", "picture",
+    # clothing / appearance states
+    "dressed", "dressed in",
+    # adverbs of manner (BLIP uses these extensively)
+    "formally", "casually", "elegantly", "neatly", "smartly",
+    "beautifully", "nicely", "comfortably", "simply", "neatly",
+    # common person descriptors never worth penalising
+    "young", "old", "elderly", "middle-aged", "tall", "short",
+    # positional / state descriptors
+    "seated", "posed", "positioned",
+    # general positive adjectives
+    "nice", "lovely", "fine", "great",
 })
 
 _HEDGE_MARKERS: Tuple[str, ...] = ("possibly", "appears to be", "might be", "may be")
@@ -490,6 +508,30 @@ for syn, canon in _SYNONYMS.items():
     _INVERTED_SYNONYMS[canon].add(syn)
     for part in syn.split():
         _INVERTED_SYNONYMS[canon].add(part)
+
+# ---------------------------------------------------------------------------
+# Predicate-to-semantic-variant mapping — allows the validator to recognise
+# when a caption paraphrases a grounded relation rather than matching it
+# word-for-word.  Each key is a canonical predicate; values are surface
+# forms that carry the same meaning in a scene caption.
+# ---------------------------------------------------------------------------
+
+_PREDICATE_SEMANTIC_VARIANTS: Dict[str, set] = {
+    "wearing":      {"wearing", "wears", "wear", "dressed", "dressed in",
+                     "clad in", "clothed in", "dressed up in"},
+    "riding":       {"riding", "rides", "ride", "riding on", "rides on",
+                     "ride on"},
+    "sitting on":   {"sitting on", "sits on", "sit on", "seated on",
+                     "seated at", "sitting at", "sits at", "seated",
+                     "sitting"},
+    "standing on":  {"standing on", "stands on", "stand on"},
+    "holding":      {"holding", "holds", "hold", "holding onto"},
+    "carrying":     {"carrying", "carries", "carry"},
+    "looking at":   {"looking at", "looks at", "look at", "watching",
+                     "watches", "gazing at", "staring at", "observing"},
+    "near":         {"near", "beside", "next to", "alongside", "close to",
+                     "by"},
+}
 
 # ---------------------------------------------------------------------------
 # Concrete object nouns — words that refer to physical, detectable objects.
@@ -927,6 +969,77 @@ def _check_unsupported_objects(
     return unsupported, supported
 
 
+def _check_semantic_relation_grounding(
+    caption: str,
+    relations: List[Dict],
+    detections: List[Detection],
+) -> Tuple[bool, List[str]]:
+    """
+    Check whether a caption semantically expresses any grounded relation.
+
+    Unlike the strict object-noun check, this function uses the
+    ``_PREDICATE_SEMANTIC_VARIANTS`` map so that paraphrases such as
+    ``"formally dressed"`` (for ``wearing``) are recognised as grounded.
+
+    Rules for acceptance:
+        * subject (or a synonym) AND predicate (or a semantic variant)
+          both appear in the caption, OR
+        * subject AND object both appear AND the predicate is spatial
+          (``near``, ``beside``, …).
+
+    Returns:
+        (any_grounded, list_of_semantic_descriptions)
+    """
+    if not relations:
+        return False, []
+
+    caption_lower = caption.lower()
+    caption_words: set = set(re.findall(r"[a-z]+", caption_lower))
+
+    grounded_descs: List[str] = []
+
+    for r in relations:
+        subj = r.get("subject", "").lower()
+        pred = r.get("predicate", "").lower()
+        obj  = r.get("object", "").lower()
+        if not subj or not pred:
+            continue
+
+        # --- subject variants (label + all synonyms) ---
+        subj_variants: set = {subj} | _INVERTED_SYNONYMS.get(subj, set())
+        subj_found = any(
+            all(w in caption_words for w in v.split())
+            for v in subj_variants
+        )
+
+        # --- object variants ---
+        obj_variants: set = {obj} | _INVERTED_SYNONYMS.get(obj, set())
+        obj_found = any(
+            all(w in caption_words for w in v.split())
+            for v in obj_variants
+        )
+
+        # --- predicate variants (semantically equivalent forms) ---
+        pred_variants: set = _PREDICATE_SEMANTIC_VARIANTS.get(pred, {pred})
+        pred_found = any(
+            all(w in caption_words for w in v.split())
+            for v in pred_variants
+        )
+
+        # Accept if the core interaction (subj + predicate) is expressed
+        if subj_found and pred_found:
+            grounded_descs.append(f"{subj} {pred} {obj}")
+            continue
+
+        # Accept spatial relations when both participants are mentioned
+        if subj_found and obj_found and pred in {"near", "next to",
+                                                  "beside", "on", "in",
+                                                  "behind", "in front of"}:
+            grounded_descs.append(f"{subj} {pred} {obj}")
+
+    return len(grounded_descs) > 0, grounded_descs
+
+
 def _print_gate_decision(
     decision: str,
     reasons_accept: List[str],
@@ -936,18 +1049,18 @@ def _print_gate_decision(
 ) -> None:
     """Print structured debug output for the gating decision."""
     det_labels = [d["label"] for d in detections]
-    print(f"\n[gate] {'=' * 50}")
-    print(f"[gate] DECISION: {decision}")
-    print(f"[gate] {'=' * 50}")
-    print(f"[gate] Raw caption:  {caption[:120]}")
-    print(f"[gate] Detections:   {det_labels}")
+    debug_print(f"\n[gate] {'=' * 50}")
+    debug_print(f"[gate] DECISION: {decision}")
+    debug_print(f"[gate] {'=' * 50}")
+    debug_print(f"[gate] Raw caption:  {caption[:120]}")
+    debug_print(f"[gate] Detections:   {det_labels}")
     if reasons_accept:
         for r in reasons_accept:
-            print(f"[gate]   + {r}")
+            debug_print(f"[gate]   + {r}")
     if reasons_reject:
         for r in reasons_reject:
-            print(f"[gate]   - {r}")
-    print(f"[gate] {'=' * 50}")
+            debug_print(f"[gate]   - {r}")
+    debug_print(f"[gate] {'=' * 50}")
 
 
 def gate_caption(
@@ -956,14 +1069,19 @@ def gate_caption(
     unsupported_threshold: float = 0.4,
     confidence_threshold: float = 0.5,
     _depth: int = 0,
+    relations: Optional[List[Dict]] = None,
 ) -> str:
     """
-    Post-process a raw BLIP caption using balanced grounded validation.
+    Post-process a raw BLIP caption using semantically-flexible validation.
 
     STRICT on object nouns: any concrete object mentioned must be detected.
     SOFT on verbs/scene: interactions are never penalised.
     PERMISSIVE on context: ambient/scene words pass through.
-    Partial repair: single hallucinated object → remove that phrase, keep rest.
+    SEMANTIC on predicates: paraphrases of grounded relations are accepted.
+
+    If a caption semantically expresses a grounded relation (subject + action
+    paraphrase found), the content-word threshold is relaxed to 0.60 so that
+    descriptive modifiers (e.g. "formally dressed") do not trigger fallback.
 
     Args:
         caption:               Raw decoded model output.
@@ -972,6 +1090,8 @@ def gate_caption(
                                unsupported content words (default 0.40).
         confidence_threshold:  Detections below this score get hedged (default 0.50).
         _depth:                Internal recursion guard (default 0).
+        relations:             Optional grounded relation dicts for semantic
+                               paraphrase aware validation.
 
     Returns:
         Grounded, clean caption string.
@@ -1015,6 +1135,7 @@ def gate_caption(
                     unsupported_threshold=unsupported_threshold,
                     confidence_threshold=confidence_threshold,
                     _depth=_depth + 1,
+                    relations=relations,
                 )
             else:
                 reasons_reject.append("repair failed to remove object")
@@ -1034,9 +1155,31 @@ def gate_caption(
             )
             return _safe_fallback(detections)
 
-    # Step 3 — SOFT verb / general content check.
+    # Step 3 — Semantic relation grounding check.
+    # If the caption semantically expresses a grounded relation (e.g.
+    # "formally dressed" for "wearing"), we can be more lenient with
+    # descriptive modifiers that aren't object-level hallucinations.
+    semantic_grounding: bool = False
+    grounded_descriptions: List[str] = []
+    if relations:
+        semantic_grounding, grounded_descriptions = _check_semantic_relation_grounding(
+            caption, relations, detections,
+        )
+
+    if semantic_grounding:
+        reasons_accept.append(
+            f"semantically grounded: {', '.join(grounded_descriptions[:3])}"
+        )
+
+    # Step 4 — SOFT verb / general content check.
     # Only applies to non-object content words (actions, descriptors, etc.)
     # using the configured unsupported_threshold.
+    #
+    # When a grounded relation is semantically expressed in the caption,
+    # relax the threshold so that descriptive modifiers (adverbs, clothing
+    # descriptors, etc.) do not trigger a false rejection.
+    effective_threshold = 0.60 if semantic_grounding else unsupported_threshold
+
     content_words = _extract_content_words(caption)
     if not content_words:
         if supported_objects:
@@ -1057,9 +1200,9 @@ def gate_caption(
     if unsupported:
         reasons_accept.append(f"minor ungrounded words ({', '.join(unsupported[:3])})")
 
-    if unsup_frac > unsupported_threshold:
+    if unsup_frac > effective_threshold:
         reasons_reject.append(
-            f"excessive unsupported content ({unsup_frac:.2f})"
+            f"excessive unsupported content ({unsup_frac:.2f} > {effective_threshold:.2f})"
         )
         _print_gate_decision(
             "REJECTED", reasons_accept, reasons_reject,
@@ -1118,7 +1261,7 @@ def generate_blip_candidates(
     if _model is None:
         _load_model()
     else:
-        print("[BLIP] Reusing cached caption model")
+        debug_print("[BLIP] Reusing cached caption model")
 
     t0 = time.time()
     pil_image = _to_pil(image)
@@ -1160,7 +1303,7 @@ def generate_blip_candidates(
             unique_candidates.append(c)
 
     gen_time = time.time() - t0
-    print(f"[BLIP] Generated {len(unique_candidates)} candidates in {gen_time:.2f}s on {_device}.")
+    debug_print(f"[BLIP] Generated {len(unique_candidates)} candidates in {gen_time:.2f}s on {_device}.")
 
     if _device.type == "cuda":
         torch.cuda.empty_cache()
@@ -1200,7 +1343,7 @@ def generate_blip_baseline(
     if _model is None:
         _load_model()
     else:
-        print("[BLIP] Reusing cached caption model")
+        debug_print("[BLIP] Reusing cached caption model")
 
     t0 = time.time()
     pil_image = _to_pil(image)
@@ -1221,7 +1364,7 @@ def generate_blip_baseline(
 
     caption = _processor.decode(output_ids[0], skip_special_tokens=True).strip()
     gen_time = time.time() - t0
-    print(f"[BLIP] Baseline caption generated in {gen_time:.2f}s on {_device}.")
+    debug_print(f"[BLIP] Baseline caption generated in {gen_time:.2f}s on {_device}.")
 
     if _device.type == "cuda":
         torch.cuda.empty_cache()
@@ -1261,7 +1404,7 @@ def generate_blip_caption(
     if _model is None:
         _load_model()
     else:
-        print("[BLIP] Reusing cached caption model")
+        debug_print("[BLIP] Reusing cached caption model")
 
     t0 = time.time()
     pil_image = _to_pil(image)
@@ -1283,16 +1426,23 @@ def generate_blip_caption(
 
     raw_caption = _processor.decode(output_ids[0], skip_special_tokens=True).strip()
     gen_time = time.time() - t0
-    print(f"[BLIP] Grounded caption generated in {gen_time:.2f}s on {_device}.")
+    debug_print(f"[BLIP] Grounded caption generated in {gen_time:.2f}s on {_device}.")
 
     if _device.type == "cuda":
         torch.cuda.empty_cache()
+
+    # Convert tuple-format relationships to dicts for semantic checking
+    rel_dicts: List[Dict] = [
+        {"subject": s, "predicate": p, "object": o}
+        for s, p, o in relationships
+    ]
 
     return gate_caption(
         raw_caption,
         detections,
         unsupported_threshold=unsupported_threshold,
         confidence_threshold=confidence_threshold,
+        relations=rel_dicts,
     )
 
 
@@ -1332,7 +1482,7 @@ def generate_blip_semantic_caption(
     if _model is None:
         _load_model()
     else:
-        print("[BLIP] Reusing cached caption model")
+        debug_print("[BLIP] Reusing cached caption model")
 
     t0 = time.time()
     pil_image = _to_pil(image)
@@ -1370,7 +1520,7 @@ def generate_blip_semantic_caption(
 
     raw_caption = _processor.decode(output_ids[0], skip_special_tokens=True).strip()
     gen_time = time.time() - t0
-    print(f"[BLIP] Semantic caption generated in {gen_time:.2f}s on {_device}.")
+    debug_print(f"[BLIP] Semantic caption generated in {gen_time:.2f}s on {_device}.")
 
     if _device.type == "cuda":
         torch.cuda.empty_cache()
@@ -1381,12 +1531,13 @@ def generate_blip_semantic_caption(
         raw_caption, detections, relations, debug=True,
     )
 
-    # Step 9 - Evidence gating (unchanged)
+    # Step 9 - Evidence gating (semantically-flexible validation)
     gated = gate_caption(
         corrected_raw,
         detections,
         unsupported_threshold=unsupported_threshold,
         confidence_threshold=confidence_threshold,
+        relations=relations,
     )
 
     return raw_caption, gated, prompt, verbalized

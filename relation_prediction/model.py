@@ -30,20 +30,21 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 
-from .vg_dataset import GEO_DIM, POSE_FEATURE_DIM, UNION_FEATURE_DIM
+from .vg_dataset import GEO_DIM, POSE_FEATURE_DIM, POSE_OBJECT_FEATURE_DIM, UNION_FEATURE_DIM
 
 
 class RelationMLP(nn.Module):
     """
     Args:
-        num_labels:     Vocabulary size for subject / object labels.
-        num_predicates: Number of predicate classes to predict.
-        embed_dim:      Embedding dimension for label tokens.
-        hidden_dims:    Sequence of hidden layer widths.
-        dropout:        Dropout probability applied after each hidden ReLU.
-        clip_dim:       Dimension of CLIP visual embeddings (0 = no visual features).
-        pose_dim:       Dimension of pose features (0 = no pose features).
-        union_dim:      Dimension of union-region CLIP embedding (0 = no union).
+        num_labels:        Vocabulary size for subject / object labels.
+        num_predicates:    Number of predicate classes to predict.
+        embed_dim:         Embedding dimension for label tokens.
+        hidden_dims:       Sequence of hidden layer widths.
+        dropout:           Dropout probability applied after each hidden ReLU.
+        clip_dim:          Dimension of CLIP visual embeddings (0 = no visual features).
+        pose_dim:          Dimension of pose features (0 = no pose features).
+        pose_object_dim:   Dimension of pose-object relative features (0 = disabled).
+        union_dim:         Dimension of union-region CLIP embedding (0 = no union).
     """
 
     def __init__(
@@ -55,6 +56,7 @@ class RelationMLP(nn.Module):
         dropout: float = 0.3,
         clip_dim: int = 0,
         pose_dim: int = 0,
+        pose_object_dim: int = 0,
         union_dim: int = 0,
     ) -> None:
         super().__init__()
@@ -62,9 +64,10 @@ class RelationMLP(nn.Module):
         self.label_emb = nn.Embedding(num_labels, embed_dim, padding_idx=0)
         self.clip_dim = clip_dim
         self.pose_dim = pose_dim
+        self.pose_object_dim = pose_object_dim
         self.union_dim = union_dim
 
-        in_dim = 2 * embed_dim + GEO_DIM + 2 * clip_dim + union_dim + pose_dim
+        in_dim = 2 * embed_dim + GEO_DIM + 2 * clip_dim + union_dim + pose_dim + pose_object_dim
         layers: list = []
         prev = in_dim
         for h in hidden_dims:
@@ -86,9 +89,18 @@ class RelationMLP(nn.Module):
         obj_feat:  torch.Tensor = None,  # (B, clip_dim) float or None
         union_feat: torch.Tensor = None, # (B, union_dim) float or None
         pose_feat:  torch.Tensor = None, # (B, pose_dim) float or None
+        pose_object_feat: torch.Tensor = None, # (B, pose_object_dim) float or None
+        geo_dropout_prob: float = 0.0,   # training-only geometry modality dropout
     ) -> torch.Tensor:            # (B, num_predicates)
         se = self.label_emb(subj_idx)         # (B, embed_dim)
         oe = self.label_emb(obj_idx)          # (B, embed_dim)
+
+        # ── Geometry modality dropout (training only) ────────────────
+        # Randomly zero geometry features to force the model to rely on
+        # semantic, visual, and pose cues instead of geometry shortcuts.
+        if self.training and geo_dropout_prob > 0.0:
+            if torch.rand(1).item() < geo_dropout_prob:
+                geo = torch.zeros_like(geo)
 
         components = [se, oe, geo]
 
@@ -101,6 +113,9 @@ class RelationMLP(nn.Module):
 
         if self.pose_dim > 0 and pose_feat is not None:
             components.append(pose_feat)
+
+        if self.pose_object_dim > 0 and pose_object_feat is not None:
+            components.append(pose_object_feat)
 
         x = torch.cat(components, dim=-1)     # (B, in_dim)
         return self.mlp(x)

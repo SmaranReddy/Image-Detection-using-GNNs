@@ -12,6 +12,8 @@ from __future__ import annotations
 import re
 from typing import Dict, List, Optional, Tuple
 
+from utils.logger_utils import debug_print
+
 # ---------------------------------------------------------------------------
 # Verb normalisation: BLIP surface form -> canonical predicate
 # ---------------------------------------------------------------------------
@@ -608,7 +610,7 @@ def correct_caption_relations(
 
     if not relations:
         if debug:
-            print(f"\n[relation correction] no grounded relations — skipping")
+            debug_print(f"\n[relation correction] no grounded relations \u2014 skipping")
         return caption, log
 
     # Step 1 — Extract action phrases
@@ -620,17 +622,17 @@ def correct_caption_relations(
 
     if not actions:
         if debug:
-            print(f"\n[relation correction] no action phrases detected — caption unchanged")
+            debug_print(f"\n[relation correction] no action phrases detected \u2014 caption unchanged")
         return caption, log
 
     corrected = caption
 
     if debug:
-        print(f"\n[relation correction]")
-        print(f"  BLIP: {caption}")
-        print(f"  Grounded relations:")
+        debug_print(f"\n[relation correction]")
+        debug_print(f"  BLIP: {caption}")
+        debug_print(f"  Grounded relations:")
         for r in relations:
-            print(f"    {r['subject']} {r['predicate']} {r['object']} (conf={r.get('confidence',0):.3f})")
+            debug_print(f"    {r['subject']} {r['predicate']} {r['object']} (conf={r.get('confidence',0):.3f})")
 
     # Step 2-4 — Check and repair each action
     for action in actions:
@@ -653,7 +655,7 @@ def correct_caption_relations(
                 },
             })
             if debug:
-                print(f"  [+] preserved: {subject} {normalized} {obj} (grounded: {matching_rel['subject']} {matching_rel['predicate']} {matching_rel['object']})")
+                debug_print(f"  [+] preserved: {subject} {normalized} {obj} (grounded: {matching_rel['subject']} {matching_rel['predicate']} {matching_rel['object']})")
         else:
             # Step 4 — Repair: find best grounded relation
             best_rel = _find_best_rel(subject, obj, relations)
@@ -678,16 +680,16 @@ def correct_caption_relations(
                         },
                     })
                     if debug:
-                        print(f"  [-] replaced unsupported action: {normalized}")
-                        print(f"    subject: {subject}, object: {obj}")
-                        print(f"    -> using grounded: {best_rel['subject']} {best_rel['predicate']} {best_rel['object']}")
+                        debug_print(f"  [-] replaced unsupported action: {normalized}")
+                        debug_print(f"    subject: {subject}, object: {obj}")
+                        debug_print(f"    -> using grounded: {best_rel['subject']} {best_rel['predicate']} {best_rel['object']}")
                 else:
                     log["repaired"].append({
                         "action": normalized,
                         "status": "replacement_failed",
                     })
                     if debug:
-                        print(f"  [!] failed to replace: {normalized} in caption")
+                        debug_print(f"  [!] failed to replace: {normalized} in caption")
             else:
                 # Step 6 — No grounded relation exists: use safe fallback
                 fallback_pred = _FALLBACK_SPATIAL[0]
@@ -702,21 +704,21 @@ def correct_caption_relations(
                         "fallback": fallback_pred,
                     })
                     if debug:
-                        print(f"  [-] no grounded relation -- using fallback: {fallback_pred}")
+                        debug_print(f"  [-] no grounded relation -- using fallback: {fallback_pred}")
                 else:
                     if debug:
-                        print(f"  [!] no grounded relation and could not replace: {normalized}")
+                        debug_print(f"  [!] no grounded relation and could not replace: {normalized}")
 
     log["output_caption"] = corrected
 
     if debug and log["preserved"]:
         for p in log["preserved"]:
-            print(f"  [+] preserved grounded interaction: {p['action']}")
+            debug_print(f"  [+] preserved grounded interaction: {p['action']}")
 
     if debug and log["repaired"]:
         for r in log["repaired"]:
             if "replaced_with" in r:
-                print(f"  -> replaced unsupported action \"{r['action']}\" with \"{r['replaced_with']}\"")
-        print(f"  final: {corrected}")
+                debug_print(f"  -> replaced unsupported action \"{r['action']}\" with \"{r['replaced_with']}\"")
+        debug_print(f"  final: {corrected}")
 
     return corrected, log

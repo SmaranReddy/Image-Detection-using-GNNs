@@ -25,6 +25,8 @@ import torch.nn.functional as F
 from PIL import Image
 from transformers import CLIPModel, CLIPProcessor
 
+from utils.logger_utils import debug_print
+
 
 CLIP_EMBED_DIM = 512
 
@@ -54,13 +56,13 @@ class CLIPSimilarityScorer:
     def _lazy_load(cls) -> None:
         if cls._model is not None:
             return
-        print("[CLIPSimilarityScorer] Loading full CLIP model (vision + text) …")
+        debug_print("[CLIPSimilarityScorer] Loading full CLIP model (vision + text) \u2026")
         cls._processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
         cls._model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
         cls._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         cls._model.to(cls._device)
         cls._model.eval()
-        print(f"[CLIPSimilarityScorer] Ready on {cls._device}")
+        debug_print(f"[CLIPSimilarityScorer] Ready on {cls._device}")
 
     @torch.no_grad()
     def encode_image(self, image: Image.Image) -> torch.Tensor:

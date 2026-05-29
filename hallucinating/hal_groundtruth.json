@@ -1,0 +1,3317 @@
+[
+    {
+        "image": "000000391895.jpg",
+        "caption": "a man riding a motorcycle down a dirt road",
+        "ground_truth_objects": [
+            "motorcycle",
+            "person",
+            "bicycle"
+        ],
+        "hallucinated_objects": [
+            "man",
+            "road",
+            "dirt"
+        ]
+    },
+    {
+        "image": "000000522418.jpg",
+        "caption": "a woman in a red shirt and a white hat",
+        "ground_truth_objects": [
+            "person",
+            "cake",
+            "sink",
+            "knife"
+        ],
+        "hallucinated_objects": [
+            "woman",
+            "hat",
+            "shirt"
+        ]
+    },
+    {
+        "image": "000000184613.jpg",
+        "caption": "a group of people",
+        "ground_truth_objects": [
+            "person",
+            "umbrella",
+            "cow"
+        ],
+        "hallucinated_objects": [
+            "people",
+            "group"
+        ]
+    },
+    {
+        "image": "000000318219.jpg",
+        "caption": "a young boy wearing headphones while using a computer",
+        "ground_truth_objects": [
+            "mouse",
+            "keyboard",
+            "tv",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "boy",
+            "headphone",
+            "computer"
+        ]
+    },
+    {
+        "image": "000000554625.jpg",
+        "caption": "a boy wearing a white shirt",
+        "ground_truth_objects": [
+            "mouse",
+            "keyboard",
+            "tv",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "shirt",
+            "boy"
+        ]
+    },
+    {
+        "image": "000000574769.jpg",
+        "caption": "a woman in a kitchen",
+        "ground_truth_objects": [
+            "cat",
+            "bottle",
+            "clock",
+            "sink",
+            "orange",
+            "handbag",
+            "spoon",
+            "bowl",
+            "refrigerator",
+            "oven",
+            "person",
+            "potted plant"
+        ],
+        "hallucinated_objects": [
+            "woman",
+            "kitchen"
+        ]
+    },
+    {
+        "image": "000000060623.jpg",
+        "caption": "a woman sitting at a table with a candle in her mouth",
+        "ground_truth_objects": [
+            "dining table",
+            "spoon",
+            "bowl",
+            "wine glass",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "woman",
+            "mouth",
+            "candle",
+            "table"
+        ]
+    },
+    {
+        "image": "000000309022.jpg",
+        "caption": "a kitchen with a stove and a sink",
+        "ground_truth_objects": [
+            "bottle",
+            "oven",
+            "bowl",
+            "sink"
+        ],
+        "hallucinated_objects": [
+            "stove",
+            "kitchen"
+        ]
+    },
+    {
+        "image": "000000005802.jpg",
+        "caption": "a man in a kitchen",
+        "ground_truth_objects": [
+            "bottle",
+            "bowl",
+            "cup",
+            "knife",
+            "person",
+            "backpack"
+        ],
+        "hallucinated_objects": [
+            "man",
+            "kitchen"
+        ]
+    },
+    {
+        "image": "000000222564.jpg",
+        "caption": "a man in a kitchen preparing food",
+        "ground_truth_objects": [
+            "bottle",
+            "dining table",
+            "microwave",
+            "oven",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "food",
+            "man",
+            "kitchen"
+        ]
+    },
+    {
+        "image": "000000118113.jpg",
+        "caption": "a room with many desks and a clock",
+        "ground_truth_objects": [
+            "bottle",
+            "oven",
+            "dining table",
+            "book"
+        ],
+        "hallucinated_objects": [
+            "desk",
+            "clock",
+            "room"
+        ]
+    },
+    {
+        "image": "000000193271.jpg",
+        "caption": "a kitchen with a sink and a stove",
+        "ground_truth_objects": [
+            "bottle",
+            "sink",
+            "fork",
+            "toaster",
+            "spoon",
+            "bowl",
+            "wine glass",
+            "cup",
+            "microwave",
+            "oven"
+        ],
+        "hallucinated_objects": [
+            "stove",
+            "kitchen"
+        ]
+    },
+    {
+        "image": "000000224736.jpg",
+        "caption": "a kitchen with a sink and a stove",
+        "ground_truth_objects": [
+            "toilet",
+            "sink"
+        ],
+        "hallucinated_objects": [
+            "stove",
+            "kitchen"
+        ]
+    },
+    {
+        "image": "000000483108.jpg",
+        "caption": "a train on the tracks",
+        "ground_truth_objects": [
+            "stop sign",
+            "person",
+            "train",
+            "bicycle"
+        ],
+        "hallucinated_objects": [
+            "track"
+        ]
+    },
+    {
+        "image": "000000403013.jpg",
+        "caption": "a kitchen with a sink and a stove",
+        "ground_truth_objects": [
+            "sink",
+            "bowl",
+            "refrigerator",
+            "microwave",
+            "oven"
+        ],
+        "hallucinated_objects": [
+            "stove",
+            "kitchen"
+        ]
+    },
+    {
+        "image": "000000374628.jpg",
+        "caption": "a kitchen and dining area in a home",
+        "ground_truth_objects": [
+            "sink",
+            "apple",
+            "vase",
+            "dining table",
+            "bench",
+            "spoon",
+            "laptop",
+            "bowl",
+            "cup",
+            "refrigerator",
+            "microwave",
+            "oven",
+            "chair"
+        ],
+        "hallucinated_objects": [
+            "dining",
+            "home",
+            "area",
+            "kitchen"
+        ]
+    },
+    {
+        "image": "000000328757.jpg",
+        "caption": "a woman eating a salad",
+        "ground_truth_objects": [
+            "bottle",
+            "broccoli",
+            "spoon",
+            "microwave",
+            "oven",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "woman",
+            "salad"
+        ]
+    },
+    {
+        "image": "000000384213.jpg",
+        "caption": "a kitchen with a sink and a window",
+        "ground_truth_objects": [
+            "bottle",
+            "sink",
+            "bowl",
+            "book",
+            "oven"
+        ],
+        "hallucinated_objects": [
+            "window",
+            "kitchen"
+        ]
+    },
+    {
+        "image": "000000293802.jpg",
+        "caption": "a man doing a trick on a skateboard",
+        "ground_truth_objects": [
+            "person",
+            "skateboard",
+            "dining table",
+            "bicycle",
+            "umbrella",
+            "chair"
+        ],
+        "hallucinated_objects": [
+            "trick",
+            "man"
+        ]
+    },
+    {
+        "image": "000000086408.jpg",
+        "caption": "a black stove",
+        "ground_truth_objects": [
+            "oven",
+            "microwave",
+            "refrigerator"
+        ],
+        "hallucinated_objects": [
+            "stove"
+        ]
+    },
+    {
+        "image": "000000372938.jpg",
+        "caption": "a truck with a bunch of bags on the back",
+        "ground_truth_objects": [
+            "person",
+            "backpack",
+            "truck"
+        ],
+        "hallucinated_objects": [
+            "back",
+            "bunch",
+            "bag"
+        ]
+    },
+    {
+        "image": "000000386164.jpg",
+        "caption": "a wooden table with a bunch of wooden spoons",
+        "ground_truth_objects": [
+            "dining table",
+            "fork",
+            "spoon"
+        ],
+        "hallucinated_objects": [
+            "bunch",
+            "table"
+        ]
+    },
+    {
+        "image": "000000223648.jpg",
+        "caption": "a wooden table",
+        "ground_truth_objects": [
+            "fork",
+            "dining table",
+            "spoon",
+            "book",
+            "chair"
+        ],
+        "hallucinated_objects": [
+            "table"
+        ]
+    },
+    {
+        "image": "000000204805.jpg",
+        "caption": "a boat is being pulled by a cart",
+        "ground_truth_objects": [
+            "boat",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "cart"
+        ]
+    },
+    {
+        "image": "000000113588.jpg",
+        "caption": "a man working on a laptop",
+        "ground_truth_objects": [
+            "keyboard",
+            "laptop",
+            "mouse",
+            "tv",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "man"
+        ]
+    },
+    {
+        "image": "000000384553.jpg",
+        "caption": "a man riding an elephant through a river",
+        "ground_truth_objects": [
+            "person",
+            "elephant"
+        ],
+        "hallucinated_objects": [
+            "river",
+            "man"
+        ]
+    },
+    {
+        "image": "000000337264.jpg",
+        "caption": "a woman standing in a kitchen",
+        "ground_truth_objects": [
+            "bottle",
+            "clock",
+            "spoon",
+            "bowl",
+            "cup",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "woman",
+            "kitchen"
+        ]
+    },
+    {
+        "image": "000000368402.jpg",
+        "caption": "a woman in a kitchen",
+        "ground_truth_objects": [
+            "bottle",
+            "sink",
+            "orange",
+            "spoon",
+            "bowl",
+            "wine glass",
+            "cup",
+            "knife",
+            "refrigerator",
+            "oven",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "woman",
+            "kitchen"
+        ]
+    },
+    {
+        "image": "000000012448.jpg",
+        "caption": "a baby laying in a bed with a teddy bear",
+        "ground_truth_objects": [
+            "person",
+            "teddy bear"
+        ],
+        "hallucinated_objects": [
+            "teddy",
+            "bed",
+            "baby",
+            "bear"
+        ]
+    },
+    {
+        "image": "000000079841.jpg",
+        "caption": "a man riding a bike",
+        "ground_truth_objects": [
+            "person",
+            "bicycle",
+            "backpack"
+        ],
+        "hallucinated_objects": [
+            "bike",
+            "man"
+        ]
+    },
+    {
+        "image": "000000515289.jpg",
+        "caption": "a group of people riding bikes down a street",
+        "ground_truth_objects": [
+            "bird",
+            "person",
+            "umbrella",
+            "bicycle"
+        ],
+        "hallucinated_objects": [
+            "street",
+            "bike",
+            "people",
+            "group"
+        ]
+    },
+    {
+        "image": "000000562150.jpg",
+        "caption": "a young girl holding a cat",
+        "ground_truth_objects": [
+            "cat",
+            "person",
+            "bicycle"
+        ],
+        "hallucinated_objects": [
+            "girl"
+        ]
+    },
+    {
+        "image": "000000542145.jpg",
+        "caption": "a bathroom with a toilet, sink and mirror",
+        "ground_truth_objects": [
+            "bottle",
+            "toilet",
+            "sink",
+            "toothbrush"
+        ],
+        "hallucinated_objects": [
+            "mirror",
+            "bathroom"
+        ]
+    },
+    {
+        "image": "000000412151.jpg",
+        "caption": "a man working on a bike in a garage",
+        "ground_truth_objects": [
+            "bottle",
+            "cell phone",
+            "book",
+            "bicycle",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "garage",
+            "bike",
+            "man"
+        ]
+    },
+    {
+        "image": "000000579003.jpg",
+        "caption": "a bathroom with a sink and a mirror",
+        "ground_truth_objects": [
+            "person",
+            "sink",
+            "backpack"
+        ],
+        "hallucinated_objects": [
+            "mirror",
+            "bathroom"
+        ]
+    },
+    {
+        "image": "000000242611.jpg",
+        "caption": "a bathroom with a sink and a mirror",
+        "ground_truth_objects": [
+            "potted plant",
+            "sink",
+            "vase",
+            "toilet",
+            "chair"
+        ],
+        "hallucinated_objects": [
+            "mirror",
+            "bathroom"
+        ]
+    },
+    {
+        "image": "000000051191.jpg",
+        "caption": "a bathroom with a sink and a mirror",
+        "ground_truth_objects": [
+            "vase",
+            "sink",
+            "potted plant"
+        ],
+        "hallucinated_objects": [
+            "mirror",
+            "bathroom"
+        ]
+    },
+    {
+        "image": "000000269105.jpg",
+        "caption": "a toilet with a green wall and a picture of a plant",
+        "ground_truth_objects": [
+            "toilet",
+            "potted plant"
+        ],
+        "hallucinated_objects": [
+            "wall",
+            "picture",
+            "plant"
+        ]
+    },
+    {
+        "image": "000000294832.jpg",
+        "caption": "a bathroom with a toilet, sink, and shower",
+        "ground_truth_objects": [
+            "toilet",
+            "sink"
+        ],
+        "hallucinated_objects": [
+            "bathroom"
+        ]
+    },
+    {
+        "image": "000000462565.jpg",
+        "caption": "a man riding a bike",
+        "ground_truth_objects": [
+            "truck",
+            "car",
+            "bicycle",
+            "person",
+            "fire hydrant",
+            "backpack"
+        ],
+        "hallucinated_objects": [
+            "bike",
+            "man"
+        ]
+    },
+    {
+        "image": "000000144941.jpg",
+        "caption": "a bathroom with a toilet, sink, and mirror",
+        "ground_truth_objects": [
+            "toilet",
+            "sink",
+            "potted plant"
+        ],
+        "hallucinated_objects": [
+            "mirror",
+            "bathroom"
+        ]
+    },
+    {
+        "image": "000000173350.jpg",
+        "caption": "two dogs standing next to a toilet in a bathroom",
+        "ground_truth_objects": [
+            "dog",
+            "toilet"
+        ],
+        "hallucinated_objects": [
+            "bathroom"
+        ]
+    },
+    {
+        "image": "000000324266.jpg",
+        "caption": "a bathroom with a sink and a mirror",
+        "ground_truth_objects": [
+            "bottle",
+            "toilet",
+            "sink"
+        ],
+        "hallucinated_objects": [
+            "mirror",
+            "bathroom"
+        ]
+    },
+    {
+        "image": "000000262284.jpg",
+        "caption": "a shower with a glass door",
+        "ground_truth_objects": [],
+        "hallucinated_objects": [
+            "door",
+            "glass",
+            "shower"
+        ]
+    },
+    {
+        "image": "000000111076.jpg",
+        "caption": "a bathroom with a sink and a toilet",
+        "ground_truth_objects": [
+            "bottle",
+            "person",
+            "toilet",
+            "sink"
+        ],
+        "hallucinated_objects": [
+            "bathroom"
+        ]
+    },
+    {
+        "image": "000000258985.jpg",
+        "caption": "a toilet sitting on the side of a road",
+        "ground_truth_objects": [
+            "toilet",
+            "potted plant"
+        ],
+        "hallucinated_objects": [
+            "road",
+            "side"
+        ]
+    },
+    {
+        "image": "000000321107.jpg",
+        "caption": "a woman riding a bike down a street",
+        "ground_truth_objects": [
+            "handbag",
+            "bicycle",
+            "traffic light",
+            "motorcycle",
+            "person",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "woman",
+            "street",
+            "bike"
+        ]
+    },
+    {
+        "image": "000000229643.jpg",
+        "caption": "a bathroom with a washer and a mirror",
+        "ground_truth_objects": [
+            "person",
+            "sink"
+        ],
+        "hallucinated_objects": [
+            "mirror",
+            "washer",
+            "bathroom"
+        ]
+    },
+    {
+        "image": "000000125059.jpg",
+        "caption": "a bathroom with a toilet and a sink",
+        "ground_truth_objects": [
+            "bottle",
+            "toilet",
+            "sink"
+        ],
+        "hallucinated_objects": [
+            "bathroom"
+        ]
+    },
+    {
+        "image": "000000455483.jpg",
+        "caption": "a bathroom with two sinks and a mirror",
+        "ground_truth_objects": [
+            "person",
+            "toilet",
+            "sink"
+        ],
+        "hallucinated_objects": [
+            "mirror",
+            "bathroom"
+        ]
+    },
+    {
+        "image": "000000436141.jpg",
+        "caption": "a bathroom with a toilet and a mirror",
+        "ground_truth_objects": [
+            "toilet",
+            "sink"
+        ],
+        "hallucinated_objects": [
+            "mirror",
+            "bathroom"
+        ]
+    },
+    {
+        "image": "000000129001.jpg",
+        "caption": "a bathroom with a tub, sink, and toilet",
+        "ground_truth_objects": [
+            "bottle",
+            "sink",
+            "toothbrush",
+            "cup"
+        ],
+        "hallucinated_objects": [
+            "toilet",
+            "bathroom"
+        ]
+    },
+    {
+        "image": "000000232262.jpg",
+        "caption": "a busy street",
+        "ground_truth_objects": [
+            "motorcycle",
+            "car",
+            "traffic light",
+            "truck"
+        ],
+        "hallucinated_objects": [
+            "street"
+        ]
+    },
+    {
+        "image": "000000061181.jpg",
+        "caption": "a busy street",
+        "ground_truth_objects": [
+            "truck",
+            "bus",
+            "traffic light",
+            "bicycle",
+            "motorcycle",
+            "person",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "street"
+        ]
+    },
+    {
+        "image": "000000580041.jpg",
+        "caption": "a street with cars and a traffic light",
+        "ground_truth_objects": [
+            "car",
+            "traffic light"
+        ],
+        "hallucinated_objects": [
+            "light",
+            "street",
+            "traffic"
+        ]
+    },
+    {
+        "image": "000000326781.jpg",
+        "caption": "a bathroom with a toilet, sink, and shower",
+        "ground_truth_objects": [
+            "toilet",
+            "sink"
+        ],
+        "hallucinated_objects": [
+            "bathroom"
+        ]
+    },
+    {
+        "image": "000000387362.jpg",
+        "caption": "a bathroom mirror",
+        "ground_truth_objects": [
+            "bottle",
+            "person",
+            "sink"
+        ],
+        "hallucinated_objects": [
+            "mirror",
+            "bathroom"
+        ]
+    },
+    {
+        "image": "000000138079.jpg",
+        "caption": "a bathroom with a toilet, sink, and shower",
+        "ground_truth_objects": [
+            "toilet",
+            "sink"
+        ],
+        "hallucinated_objects": [
+            "bathroom"
+        ]
+    },
+    {
+        "image": "000000556616.jpg",
+        "caption": "a parking meter on a pole",
+        "ground_truth_objects": [
+            "parking meter",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "parking",
+            "meter",
+            "pole"
+        ]
+    },
+    {
+        "image": "000000472621.jpg",
+        "caption": "a bathroom with a claw claw claw claw claw claw claw claw claw claw claw claw claw claw claw claw",
+        "ground_truth_objects": [
+            "bottle",
+            "clock",
+            "sink",
+            "vase",
+            "bowl",
+            "book"
+        ],
+        "hallucinated_objects": [
+            "claw",
+            "bathroom"
+        ]
+    },
+    {
+        "image": "000000192440.jpg",
+        "caption": "a bathroom with a wooden shelf and a toilet",
+        "ground_truth_objects": [
+            "bottle",
+            "toilet",
+            "sink",
+            "toothbrush"
+        ],
+        "hallucinated_objects": [
+            "shelf",
+            "bathroom"
+        ]
+    },
+    {
+        "image": "000000383445.jpg",
+        "caption": "a donut with a donut on it ' s side",
+        "ground_truth_objects": [
+            "car",
+            "donut"
+        ],
+        "hallucinated_objects": [
+            "side",
+            "s"
+        ]
+    },
+    {
+        "image": "000000565797.jpg",
+        "caption": "a cat is laying on the tire of a car",
+        "ground_truth_objects": [
+            "cat",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "tire"
+        ]
+    },
+    {
+        "image": "000000081922.jpg",
+        "caption": "a plane is flying over a busy street",
+        "ground_truth_objects": [
+            "airplane",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "street",
+            "plane"
+        ]
+    },
+    {
+        "image": "000000050125.jpg",
+        "caption": "a bus parked in a parking",
+        "ground_truth_objects": [
+            "bus",
+            "car",
+            "truck"
+        ],
+        "hallucinated_objects": [
+            "parking"
+        ]
+    },
+    {
+        "image": "000000394892.jpg",
+        "caption": "a young boy riding a skateboard down a street",
+        "ground_truth_objects": [
+            "person",
+            "skateboard",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "street",
+            "boy"
+        ]
+    },
+    {
+        "image": "000000001146.jpg",
+        "caption": "a man in a black shirt and tie with a green tie",
+        "ground_truth_objects": [
+            "tie",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "shirt",
+            "man"
+        ]
+    },
+    {
+        "image": "000000097434.jpg",
+        "caption": "a motorcycle parked on the side of the road",
+        "ground_truth_objects": [
+            "motorcycle",
+            "person",
+            "car",
+            "truck"
+        ],
+        "hallucinated_objects": [
+            "side",
+            "road"
+        ]
+    },
+    {
+        "image": "000000463836.jpg",
+        "caption": "a man standing in a room with a dog",
+        "ground_truth_objects": [
+            "toilet",
+            "person",
+            "backpack"
+        ],
+        "hallucinated_objects": [
+            "dog",
+            "man",
+            "room"
+        ]
+    },
+    {
+        "image": "000000241876.jpg",
+        "caption": "a cat is sitting on a toilet bowl",
+        "ground_truth_objects": [
+            "cat",
+            "toilet"
+        ],
+        "hallucinated_objects": [
+            "bowl"
+        ]
+    },
+    {
+        "image": "000000156832.jpg",
+        "caption": "a bathroom with a toilet and a sink",
+        "ground_truth_objects": [
+            "toilet",
+            "sink"
+        ],
+        "hallucinated_objects": [
+            "bathroom"
+        ]
+    },
+    {
+        "image": "000000270721.jpg",
+        "caption": "a bathroom with a toilet and a shower stall",
+        "ground_truth_objects": [
+            "toilet",
+            "sink"
+        ],
+        "hallucinated_objects": [
+            "stall",
+            "shower",
+            "bathroom"
+        ]
+    },
+    {
+        "image": "000000462341.jpg",
+        "caption": "a clock tower is seen through a window",
+        "ground_truth_objects": [
+            "clock",
+            "bird"
+        ],
+        "hallucinated_objects": [
+            "window",
+            "tower"
+        ]
+    },
+    {
+        "image": "000000122851.jpg",
+        "caption": "a man picking bananas",
+        "ground_truth_objects": [
+            "motorcycle",
+            "banana",
+            "person",
+            "truck"
+        ],
+        "hallucinated_objects": [
+            "man"
+        ]
+    },
+    {
+        "image": "000000540763.jpg",
+        "caption": "a bathroom with a toilet and a sun shaped wall",
+        "ground_truth_objects": [
+            "bottle",
+            "toilet",
+            "vase"
+        ],
+        "hallucinated_objects": [
+            "sun",
+            "wall",
+            "bathroom"
+        ]
+    },
+    {
+        "image": "000000197254.jpg",
+        "caption": "a horse drawn carriage",
+        "ground_truth_objects": [
+            "person",
+            "horse"
+        ],
+        "hallucinated_objects": [
+            "carriage"
+        ]
+    },
+    {
+        "image": "000000032907.jpg",
+        "caption": "a toilet on the ground",
+        "ground_truth_objects": [
+            "toilet",
+            "potted plant",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "ground"
+        ]
+    },
+    {
+        "image": "000000251252.jpg",
+        "caption": "a motorcycle on display",
+        "ground_truth_objects": [
+            "motorcycle",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "display"
+        ]
+    },
+    {
+        "image": "000000037675.jpg",
+        "caption": "a couple of horses grazing in a field",
+        "ground_truth_objects": [
+            "person",
+            "horse"
+        ],
+        "hallucinated_objects": [
+            "couple",
+            "field"
+        ]
+    },
+    {
+        "image": "000000268556.jpg",
+        "caption": "a man riding a motorcycle down a street",
+        "ground_truth_objects": [
+            "motorcycle",
+            "person",
+            "handbag",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "street",
+            "man"
+        ]
+    },
+    {
+        "image": "000000271177.jpg",
+        "caption": "a motorcycle parked on the side of the road",
+        "ground_truth_objects": [
+            "motorcycle",
+            "person",
+            "handbag"
+        ],
+        "hallucinated_objects": [
+            "side",
+            "road"
+        ]
+    },
+    {
+        "image": "000000085160.jpg",
+        "caption": "a man sitting at a desk with a laptop",
+        "ground_truth_objects": [
+            "keyboard",
+            "laptop",
+            "mouse",
+            "tv",
+            "person",
+            "chair",
+            "remote"
+        ],
+        "hallucinated_objects": [
+            "man",
+            "desk"
+        ]
+    },
+    {
+        "image": "000000559665.jpg",
+        "caption": "a man riding a motorcycle",
+        "ground_truth_objects": [
+            "truck",
+            "traffic light",
+            "motorcycle",
+            "person",
+            "car",
+            "backpack"
+        ],
+        "hallucinated_objects": [
+            "man"
+        ]
+    },
+    {
+        "image": "000000019358.jpg",
+        "caption": "a bowl of oats and a bottle of milk",
+        "ground_truth_objects": [
+            "bottle",
+            "banana",
+            "dining table",
+            "spoon",
+            "donut",
+            "bowl"
+        ],
+        "hallucinated_objects": [
+            "milk",
+            "oat"
+        ]
+    },
+    {
+        "image": "000000459912.jpg",
+        "caption": "a row of motorcycles",
+        "ground_truth_objects": [
+            "motorcycle",
+            "person",
+            "umbrella"
+        ],
+        "hallucinated_objects": [
+            "row"
+        ]
+    },
+    {
+        "image": "000000015827.jpg",
+        "caption": "a bunch of motorcycles parked on a street",
+        "ground_truth_objects": [
+            "motorcycle",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "street",
+            "bunch"
+        ]
+    },
+    {
+        "image": "000000394240.jpg",
+        "caption": "a street with motorcycles parked on it",
+        "ground_truth_objects": [
+            "motorcycle",
+            "person",
+            "bottle",
+            "umbrella"
+        ],
+        "hallucinated_objects": [
+            "street"
+        ]
+    },
+    {
+        "image": "000000175831.jpg",
+        "caption": "a man riding a motorcycle",
+        "ground_truth_objects": [
+            "motorcycle",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "man"
+        ]
+    },
+    {
+        "image": "000000079472.jpg",
+        "caption": "a desk with a laptop and a monitor",
+        "ground_truth_objects": [
+            "laptop",
+            "cell phone",
+            "tv",
+            "mouse"
+        ],
+        "hallucinated_objects": [
+            "monitor",
+            "desk"
+        ]
+    },
+    {
+        "image": "000000250108.jpg",
+        "caption": "a desk with a laptop and a phone",
+        "ground_truth_objects": [
+            "bottle",
+            "keyboard",
+            "laptop",
+            "book",
+            "cup",
+            "mouse",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "phone",
+            "desk"
+        ]
+    },
+    {
+        "image": "000000315601.jpg",
+        "caption": "a busy street filled with cars and motorcycles",
+        "ground_truth_objects": [
+            "truck",
+            "bus",
+            "motorcycle",
+            "person",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "street"
+        ]
+    },
+    {
+        "image": "000000437218.jpg",
+        "caption": "a living room with a flat screen tv",
+        "ground_truth_objects": [
+            "bottle",
+            "tv"
+        ],
+        "hallucinated_objects": [
+            "screen",
+            "living",
+            "room"
+        ]
+    },
+    {
+        "image": "000000503707.jpg",
+        "caption": "a group of people riding motorcycles down a street",
+        "ground_truth_objects": [
+            "motorcycle",
+            "person",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "street",
+            "people",
+            "group"
+        ]
+    },
+    {
+        "image": "000000369763.jpg",
+        "caption": "a motorcycle parked on the street",
+        "ground_truth_objects": [
+            "motorcycle",
+            "person",
+            "car",
+            "truck"
+        ],
+        "hallucinated_objects": [
+            "street"
+        ]
+    },
+    {
+        "image": "000000199951.jpg",
+        "caption": "a person riding a motorcycle on a track",
+        "ground_truth_objects": [
+            "motorcycle",
+            "person",
+            "car",
+            "truck"
+        ],
+        "hallucinated_objects": [
+            "track"
+        ]
+    },
+    {
+        "image": "000000452684.jpg",
+        "caption": "a glass of orange juice",
+        "ground_truth_objects": [
+            "orange",
+            "bowl",
+            "dining table",
+            "cup"
+        ],
+        "hallucinated_objects": [
+            "glass",
+            "juice"
+        ]
+    },
+    {
+        "image": "000000213687.jpg",
+        "caption": "a cloudy sky",
+        "ground_truth_objects": [
+            "motorcycle",
+            "person",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "sky"
+        ]
+    },
+    {
+        "image": "000000108094.jpg",
+        "caption": "a man riding a motorcycle down a street",
+        "ground_truth_objects": [
+            "motorcycle",
+            "person",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "street",
+            "man"
+        ]
+    },
+    {
+        "image": "000000527040.jpg",
+        "caption": "a table with a basket of bread and a newspaper",
+        "ground_truth_objects": [
+            "dining table",
+            "bowl",
+            "cup",
+            "person",
+            "chair",
+            "bird"
+        ],
+        "hallucinated_objects": [
+            "bread",
+            "newspaper",
+            "basket",
+            "table"
+        ]
+    },
+    {
+        "image": "000000350341.jpg",
+        "caption": "a basket of bread and a newspaper on a table",
+        "ground_truth_objects": [
+            "dining table",
+            "bowl",
+            "person",
+            "chair",
+            "bird"
+        ],
+        "hallucinated_objects": [
+            "bread",
+            "newspaper",
+            "basket",
+            "table"
+        ]
+    },
+    {
+        "image": "000000550529.jpg",
+        "caption": "a motorcycle is parked in a wine cellar",
+        "ground_truth_objects": [
+            "motorcycle",
+            "bottle"
+        ],
+        "hallucinated_objects": [
+            "wine",
+            "cellar"
+        ]
+    },
+    {
+        "image": "000000281533.jpg",
+        "caption": "a dog watching a television in a living room",
+        "ground_truth_objects": [
+            "dog",
+            "tv",
+            "potted plant"
+        ],
+        "hallucinated_objects": [
+            "television",
+            "living",
+            "room"
+        ]
+    },
+    {
+        "image": "000000369826.jpg",
+        "caption": "a large flat screen tv",
+        "ground_truth_objects": [
+            "tv",
+            "person",
+            "chair"
+        ],
+        "hallucinated_objects": [
+            "screen"
+        ]
+    },
+    {
+        "image": "000000551334.jpg",
+        "caption": "a man sitting at a desk in front of a television",
+        "ground_truth_objects": [
+            "cup",
+            "tv",
+            "person",
+            "chair",
+            "remote"
+        ],
+        "hallucinated_objects": [
+            "front",
+            "man",
+            "desk",
+            "television"
+        ]
+    },
+    {
+        "image": "000000291380.jpg",
+        "caption": "a man sitting on a bench in the back of a car",
+        "ground_truth_objects": [
+            "tv",
+            "person",
+            "chair",
+            "backpack"
+        ],
+        "hallucinated_objects": [
+            "car",
+            "man",
+            "bench",
+            "back"
+        ]
+    },
+    {
+        "image": "000000077123.jpg",
+        "caption": "a plane parked on the tarmac",
+        "ground_truth_objects": [
+            "airplane",
+            "truck"
+        ],
+        "hallucinated_objects": [
+            "tarmac",
+            "plane"
+        ]
+    },
+    {
+        "image": "000000513681.jpg",
+        "caption": "a plane on the ground",
+        "ground_truth_objects": [
+            "person",
+            "airplane",
+            "truck"
+        ],
+        "hallucinated_objects": [
+            "ground",
+            "plane"
+        ]
+    },
+    {
+        "image": "000000437370.jpg",
+        "caption": "a small plane on the ground",
+        "ground_truth_objects": [
+            "person",
+            "airplane"
+        ],
+        "hallucinated_objects": [
+            "ground",
+            "plane"
+        ]
+    },
+    {
+        "image": "000000560623.jpg",
+        "caption": "a view of an airport from a window",
+        "ground_truth_objects": [
+            "airplane",
+            "truck"
+        ],
+        "hallucinated_objects": [
+            "window",
+            "airport",
+            "view"
+        ]
+    },
+    {
+        "image": "000000289173.jpg",
+        "caption": "a plane on the tar",
+        "ground_truth_objects": [
+            "person",
+            "airplane",
+            "truck"
+        ],
+        "hallucinated_objects": [
+            "tar",
+            "plane"
+        ]
+    },
+    {
+        "image": "000000052759.jpg",
+        "caption": "a plane on the tar",
+        "ground_truth_objects": [
+            "person",
+            "airplane",
+            "truck"
+        ],
+        "hallucinated_objects": [
+            "tar",
+            "plane"
+        ]
+    },
+    {
+        "image": "000000128939.jpg",
+        "caption": "a man walking across a street",
+        "ground_truth_objects": [
+            "person",
+            "car",
+            "traffic light"
+        ],
+        "hallucinated_objects": [
+            "street",
+            "man"
+        ]
+    },
+    {
+        "image": "000000339974.jpg",
+        "caption": "a traffic light on a pole",
+        "ground_truth_objects": [
+            "car",
+            "traffic light"
+        ],
+        "hallucinated_objects": [
+            "light",
+            "pole",
+            "traffic"
+        ]
+    },
+    {
+        "image": "000000150410.jpg",
+        "caption": "a man is working on a small plane",
+        "ground_truth_objects": [
+            "person",
+            "airplane",
+            "truck"
+        ],
+        "hallucinated_objects": [
+            "man",
+            "plane"
+        ]
+    },
+    {
+        "image": "000000108169.jpg",
+        "caption": "the plane is flying",
+        "ground_truth_objects": [],
+        "hallucinated_objects": [
+            "plane"
+        ]
+    },
+    {
+        "image": "000000354533.jpg",
+        "caption": "a motorcycle parked in the dirt",
+        "ground_truth_objects": [
+            "motorcycle",
+            "person",
+            "sheep"
+        ],
+        "hallucinated_objects": [
+            "dirt"
+        ]
+    },
+    {
+        "image": "000000545959.jpg",
+        "caption": "a field of green grass",
+        "ground_truth_objects": [
+            "cow",
+            "sheep",
+            "bird"
+        ],
+        "hallucinated_objects": [
+            "field",
+            "grass"
+        ]
+    },
+    {
+        "image": "000000242139.jpg",
+        "caption": "a city street with a tall building in the background",
+        "ground_truth_objects": [
+            "person",
+            "car",
+            "traffic light"
+        ],
+        "hallucinated_objects": [
+            "city",
+            "street",
+            "building",
+            "background"
+        ]
+    },
+    {
+        "image": "000000334321.jpg",
+        "caption": "a man and a dog sitting on a bench",
+        "ground_truth_objects": [
+            "handbag",
+            "bench",
+            "dog",
+            "person",
+            "backpack"
+        ],
+        "hallucinated_objects": [
+            "man"
+        ]
+    },
+    {
+        "image": "000000381021.jpg",
+        "caption": "a white sign with a picture of a woman",
+        "ground_truth_objects": [
+            "truck",
+            "bus",
+            "traffic light",
+            "bicycle",
+            "person",
+            "potted plant",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "woman",
+            "picture",
+            "sign"
+        ]
+    },
+    {
+        "image": "000000006005.jpg",
+        "caption": "a gifet in a zoo",
+        "ground_truth_objects": [
+            "giraffe",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "gifet",
+            "zoo"
+        ]
+    },
+    {
+        "image": "000000219514.jpg",
+        "caption": "a street sign on a pole",
+        "ground_truth_objects": [
+            "traffic light",
+            "truck"
+        ],
+        "hallucinated_objects": [
+            "street",
+            "pole",
+            "sign"
+        ]
+    },
+    {
+        "image": "000000165547.jpg",
+        "caption": "a wooden table",
+        "ground_truth_objects": [
+            "bottle",
+            "vase",
+            "dining table",
+            "bench",
+            "book",
+            "chair"
+        ],
+        "hallucinated_objects": [
+            "table"
+        ]
+    },
+    {
+        "image": "000000189550.jpg",
+        "caption": "a woman with sunglasses and a git",
+        "ground_truth_objects": [
+            "giraffe",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "woman",
+            "sunglass",
+            "git"
+        ]
+    },
+    {
+        "image": "000000212663.jpg",
+        "caption": "a bus on the road",
+        "ground_truth_objects": [
+            "handbag",
+            "bus",
+            "person",
+            "bicycle"
+        ],
+        "hallucinated_objects": [
+            "road"
+        ]
+    },
+    {
+        "image": "000000476005.jpg",
+        "caption": "a row of buses",
+        "ground_truth_objects": [
+            "bus",
+            "car",
+            "traffic light"
+        ],
+        "hallucinated_objects": [
+            "row"
+        ]
+    },
+    {
+        "image": "000000450263.jpg",
+        "caption": "a woman sitting on a bench reading a newspaper",
+        "ground_truth_objects": [
+            "boat",
+            "handbag",
+            "bench",
+            "bicycle",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "woman",
+            "newspaper"
+        ]
+    },
+    {
+        "image": "000000241691.jpg",
+        "caption": "a git is sticking his head over a fence",
+        "ground_truth_objects": [
+            "giraffe",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "fence",
+            "head",
+            "git"
+        ]
+    },
+    {
+        "image": "000000450500.jpg",
+        "caption": "a group of people standing on a sidewalk",
+        "ground_truth_objects": [
+            "person",
+            "handbag",
+            "car",
+            "traffic light"
+        ],
+        "hallucinated_objects": [
+            "sidewalk",
+            "people",
+            "group"
+        ]
+    },
+    {
+        "image": "000000232894.jpg",
+        "caption": "two children sitting at a table",
+        "ground_truth_objects": [
+            "person",
+            "dining table",
+            "bench"
+        ],
+        "hallucinated_objects": [
+            "child",
+            "table"
+        ]
+    },
+    {
+        "image": "000000029913.jpg",
+        "caption": "a black fire hydrant",
+        "ground_truth_objects": [
+            "fire hydrant",
+            "car",
+            "bicycle"
+        ],
+        "hallucinated_objects": [
+            "fire"
+        ]
+    },
+    {
+        "image": "000000455859.jpg",
+        "caption": "a group of people standing around a blue sculpture",
+        "ground_truth_objects": [
+            "cell phone",
+            "person",
+            "bicycle",
+            "backpack"
+        ],
+        "hallucinated_objects": [
+            "sculpture",
+            "people",
+            "group"
+        ]
+    },
+    {
+        "image": "000000235302.jpg",
+        "caption": "a man wearing a suit",
+        "ground_truth_objects": [
+            "tie",
+            "person",
+            "bench"
+        ],
+        "hallucinated_objects": [
+            "man",
+            "suit"
+        ]
+    },
+    {
+        "image": "000000290570.jpg",
+        "caption": "a group of sheep",
+        "ground_truth_objects": [
+            "bench",
+            "sheep"
+        ],
+        "hallucinated_objects": [
+            "group"
+        ]
+    },
+    {
+        "image": "000000127474.jpg",
+        "caption": "a little girl wearing a fireman hat",
+        "ground_truth_objects": [
+            "person",
+            "fire hydrant"
+        ],
+        "hallucinated_objects": [
+            "hat",
+            "girl",
+            "fireman"
+        ]
+    },
+    {
+        "image": "000000028758.jpg",
+        "caption": "a gife standing in a field",
+        "ground_truth_objects": [
+            "giraffe",
+            "zebra"
+        ],
+        "hallucinated_objects": [
+            "field",
+            "gife"
+        ]
+    },
+    {
+        "image": "000000332654.jpg",
+        "caption": "a yellow and blue fire hydrant on the side of the road",
+        "ground_truth_objects": [
+            "fire hydrant",
+            "car",
+            "traffic light"
+        ],
+        "hallucinated_objects": [
+            "side",
+            "fire",
+            "road"
+        ]
+    },
+    {
+        "image": "000000038029.jpg",
+        "caption": "a red fire hydra truck",
+        "ground_truth_objects": [
+            "person",
+            "fire hydrant",
+            "truck"
+        ],
+        "hallucinated_objects": [
+            "hydra",
+            "fire"
+        ]
+    },
+    {
+        "image": "000000017756.jpg",
+        "caption": "a boat with a tent on the side of it",
+        "ground_truth_objects": [
+            "boat",
+            "bird"
+        ],
+        "hallucinated_objects": [
+            "tent",
+            "side"
+        ]
+    },
+    {
+        "image": "000000155885.jpg",
+        "caption": "a black and white photo of boats in a harbor",
+        "ground_truth_objects": [
+            "boat",
+            "person",
+            "bird"
+        ],
+        "hallucinated_objects": [
+            "photo",
+            "harbor"
+        ]
+    },
+    {
+        "image": "000000231408.jpg",
+        "caption": "a cat is looking at a bird in the air",
+        "ground_truth_objects": [
+            "cat",
+            "bird"
+        ],
+        "hallucinated_objects": [
+            "air"
+        ]
+    },
+    {
+        "image": "000000190056.jpg",
+        "caption": "two gis standing next to a fence",
+        "ground_truth_objects": [
+            "giraffe",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "fence",
+            "gis"
+        ]
+    },
+    {
+        "image": "000000176649.jpg",
+        "caption": "a sign with the words love is now written on it",
+        "ground_truth_objects": [],
+        "hallucinated_objects": [
+            "love",
+            "word",
+            "sign"
+        ]
+    },
+    {
+        "image": "000000236182.jpg",
+        "caption": "a street with a tree and a bike rack",
+        "ground_truth_objects": [
+            "truck",
+            "traffic light",
+            "bicycle",
+            "person",
+            "fire hydrant"
+        ],
+        "hallucinated_objects": [
+            "street",
+            "bike",
+            "rack",
+            "tree"
+        ]
+    },
+    {
+        "image": "000000208589.jpg",
+        "caption": "a bird eating food",
+        "ground_truth_objects": [
+            "apple",
+            "potted plant",
+            "bird"
+        ],
+        "hallucinated_objects": [
+            "food"
+        ]
+    },
+    {
+        "image": "000000334405.jpg",
+        "caption": "a bus on the road",
+        "ground_truth_objects": [
+            "stop sign",
+            "truck",
+            "bus",
+            "person",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "road"
+        ]
+    },
+    {
+        "image": "000000073830.jpg",
+        "caption": "a gifet in the fore",
+        "ground_truth_objects": [
+            "giraffe",
+            "bench",
+            "zebra"
+        ],
+        "hallucinated_objects": [
+            "gifet",
+            "fore"
+        ]
+    },
+    {
+        "image": "000000082258.jpg",
+        "caption": "a black book shelf",
+        "ground_truth_objects": [
+            "book",
+            "bird"
+        ],
+        "hallucinated_objects": [
+            "shelf"
+        ]
+    },
+    {
+        "image": "000000351053.jpg",
+        "caption": "a yellow taxi cab",
+        "ground_truth_objects": [
+            "person",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "taxi",
+            "cab"
+        ]
+    },
+    {
+        "image": "000000157269.jpg",
+        "caption": "a man wearing a safety vest",
+        "ground_truth_objects": [
+            "handbag",
+            "bus",
+            "traffic light",
+            "person",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "safety",
+            "vest",
+            "man"
+        ]
+    },
+    {
+        "image": "000000570045.jpg",
+        "caption": "a sign with a arrow pointing to the right",
+        "ground_truth_objects": [],
+        "hallucinated_objects": [
+            "right",
+            "pointing",
+            "arrow",
+            "sign"
+        ]
+    },
+    {
+        "image": "000000191501.jpg",
+        "caption": "a red building",
+        "ground_truth_objects": [],
+        "hallucinated_objects": [
+            "building"
+        ]
+    },
+    {
+        "image": "000000008665.jpg",
+        "caption": "a bird sitting on a table",
+        "ground_truth_objects": [
+            "dining table",
+            "chair",
+            "bird"
+        ],
+        "hallucinated_objects": [
+            "table"
+        ]
+    },
+    {
+        "image": "000000125997.jpg",
+        "caption": "a blue and yellow building",
+        "ground_truth_objects": [],
+        "hallucinated_objects": [
+            "building"
+        ]
+    },
+    {
+        "image": "000000069911.jpg",
+        "caption": "a street sign on a pole in front of a building",
+        "ground_truth_objects": [],
+        "hallucinated_objects": [
+            "pole",
+            "building",
+            "street",
+            "front",
+            "sign"
+        ]
+    },
+    {
+        "image": "000000573291.jpg",
+        "caption": "two gis are sitting in the grass near a tree",
+        "ground_truth_objects": [
+            "giraffe",
+            "bird"
+        ],
+        "hallucinated_objects": [
+            "tree",
+            "gis",
+            "grass"
+        ]
+    },
+    {
+        "image": "000000322654.jpg",
+        "caption": "a street sign on a pole",
+        "ground_truth_objects": [
+            "person",
+            "car",
+            "fire hydrant",
+            "backpack"
+        ],
+        "hallucinated_objects": [
+            "street",
+            "pole",
+            "sign"
+        ]
+    },
+    {
+        "image": "000000375363.jpg",
+        "caption": "a street sign with a pedestrian sign on it",
+        "ground_truth_objects": [],
+        "hallucinated_objects": [
+            "street",
+            "pedestrian",
+            "sign"
+        ]
+    },
+    {
+        "image": "000000338948.jpg",
+        "caption": "a man doing a trick on a skateboard",
+        "ground_truth_objects": [
+            "person",
+            "skateboard",
+            "bench"
+        ],
+        "hallucinated_objects": [
+            "trick",
+            "man"
+        ]
+    },
+    {
+        "image": "000000325690.jpg",
+        "caption": "a red and white sign",
+        "ground_truth_objects": [],
+        "hallucinated_objects": [
+            "sign"
+        ]
+    },
+    {
+        "image": "000000388325.jpg",
+        "caption": "a house with a street sign in front of it",
+        "ground_truth_objects": [
+            "potted plant",
+            "dining table",
+            "umbrella",
+            "chair"
+        ],
+        "hallucinated_objects": [
+            "front",
+            "street",
+            "house",
+            "sign"
+        ]
+    },
+    {
+        "image": "000000075083.jpg",
+        "caption": "a street sign with a building in the background",
+        "ground_truth_objects": [],
+        "hallucinated_objects": [
+            "street",
+            "background",
+            "building",
+            "sign"
+        ]
+    },
+    {
+        "image": "000000026767.jpg",
+        "caption": "a street sign on a street corner with a tree",
+        "ground_truth_objects": [],
+        "hallucinated_objects": [
+            "street",
+            "corner",
+            "tree",
+            "sign"
+        ]
+    },
+    {
+        "image": "000000518586.jpg",
+        "caption": "a train is coming down the tracks in a rural area",
+        "ground_truth_objects": [
+            "person",
+            "train"
+        ],
+        "hallucinated_objects": [
+            "area",
+            "track"
+        ]
+    },
+    {
+        "image": "000000065227.jpg",
+        "caption": "a white picket fence",
+        "ground_truth_objects": [
+            "tie",
+            "person",
+            "bench"
+        ],
+        "hallucinated_objects": [
+            "fence",
+            "picket"
+        ]
+    },
+    {
+        "image": "000000476597.jpg",
+        "caption": "a man in a suit",
+        "ground_truth_objects": [
+            "tie",
+            "handbag",
+            "book",
+            "cup",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "man",
+            "suit"
+        ]
+    },
+    {
+        "image": "000000165029.jpg",
+        "caption": "a man holding a snowboard",
+        "ground_truth_objects": [
+            "bottle",
+            "person",
+            "snowboard"
+        ],
+        "hallucinated_objects": [
+            "man"
+        ]
+    },
+    {
+        "image": "000000117125.jpg",
+        "caption": "a train on the tracks",
+        "ground_truth_objects": [
+            "person",
+            "train"
+        ],
+        "hallucinated_objects": [
+            "track"
+        ]
+    },
+    {
+        "image": "000000129942.jpg",
+        "caption": "two parrots sitting on a tree branch",
+        "ground_truth_objects": [
+            "bowl",
+            "bird"
+        ],
+        "hallucinated_objects": [
+            "tree",
+            "branch",
+            "parrot"
+        ]
+    },
+    {
+        "image": "000000426175.jpg",
+        "caption": "a woman standing on a train with a train behind her",
+        "ground_truth_objects": [
+            "person",
+            "backpack",
+            "potted plant",
+            "train"
+        ],
+        "hallucinated_objects": [
+            "woman"
+        ]
+    },
+    {
+        "image": "000000336777.jpg",
+        "caption": "a street sign with a house in the background",
+        "ground_truth_objects": [],
+        "hallucinated_objects": [
+            "street",
+            "house",
+            "background",
+            "sign"
+        ]
+    },
+    {
+        "image": "000000249720.jpg",
+        "caption": "a woman riding a bike down a street",
+        "ground_truth_objects": [
+            "person",
+            "bench",
+            "stop sign",
+            "bicycle",
+            "traffic light",
+            "backpack",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "woman",
+            "street",
+            "bike"
+        ]
+    },
+    {
+        "image": "000000409009.jpg",
+        "caption": "a train on the tracks",
+        "ground_truth_objects": [
+            "bus",
+            "train"
+        ],
+        "hallucinated_objects": [
+            "track"
+        ]
+    },
+    {
+        "image": "000000554348.jpg",
+        "caption": "a woman standing on a train track",
+        "ground_truth_objects": [
+            "handbag",
+            "train",
+            "traffic light",
+            "person",
+            "backpack"
+        ],
+        "hallucinated_objects": [
+            "woman",
+            "track"
+        ]
+    },
+    {
+        "image": "000000231163.jpg",
+        "caption": "a train on the tracks",
+        "ground_truth_objects": [
+            "person",
+            "train"
+        ],
+        "hallucinated_objects": [
+            "track"
+        ]
+    },
+    {
+        "image": "000000463633.jpg",
+        "caption": "a stop sign with graffiti on it",
+        "ground_truth_objects": [
+            "bottle",
+            "stop sign",
+            "car",
+            "traffic light"
+        ],
+        "hallucinated_objects": [
+            "sign",
+            "graffiti",
+            "stop"
+        ]
+    },
+    {
+        "image": "000000383470.jpg",
+        "caption": "a stop sign is covered in snow on a street",
+        "ground_truth_objects": [
+            "parking meter",
+            "stop sign"
+        ],
+        "hallucinated_objects": [
+            "sign",
+            "snow",
+            "street",
+            "stop"
+        ]
+    },
+    {
+        "image": "000000578292.jpg",
+        "caption": "a young boy standing next to a stop sign",
+        "ground_truth_objects": [
+            "person",
+            "stop sign",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "sign",
+            "boy",
+            "stop"
+        ]
+    },
+    {
+        "image": "000000522778.jpg",
+        "caption": "a group of people standing around a fire hydra",
+        "ground_truth_objects": [
+            "handbag",
+            "person",
+            "parking meter"
+        ],
+        "hallucinated_objects": [
+            "hydra",
+            "fire",
+            "people",
+            "group"
+        ]
+    },
+    {
+        "image": "000000365366.jpg",
+        "caption": "a woman sitting on the ground",
+        "ground_truth_objects": [
+            "handbag",
+            "parking meter",
+            "bicycle",
+            "person",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "woman",
+            "ground"
+        ]
+    },
+    {
+        "image": "000000046743.jpg",
+        "caption": "a woman sitting on the sidewalk with her feet up",
+        "ground_truth_objects": [
+            "handbag",
+            "truck",
+            "parking meter",
+            "person",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "woman",
+            "foot",
+            "sidewalk"
+        ]
+    },
+    {
+        "image": "000000554114.jpg",
+        "caption": "a man kneeling down to a parking meter",
+        "ground_truth_objects": [
+            "person",
+            "parking meter",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "man",
+            "parking",
+            "meter"
+        ]
+    },
+    {
+        "image": "000000052644.jpg",
+        "caption": "a parking lot with parking meters and a parking meter",
+        "ground_truth_objects": [
+            "boat",
+            "parking meter",
+            "bicycle"
+        ],
+        "hallucinated_objects": [
+            "parking",
+            "meter",
+            "lot"
+        ]
+    },
+    {
+        "image": "000000269394.jpg",
+        "caption": "two parking meters",
+        "ground_truth_objects": [
+            "parking meter",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "parking",
+            "meter"
+        ]
+    },
+    {
+        "image": "000000183757.jpg",
+        "caption": "a cat sitting on top of a boat",
+        "ground_truth_objects": [
+            "cat",
+            "dog"
+        ],
+        "hallucinated_objects": [
+            "boat",
+            "top"
+        ]
+    },
+    {
+        "image": "000000437609.jpg",
+        "caption": "a man sitting in the grass",
+        "ground_truth_objects": [
+            "dog",
+            "person",
+            "cow"
+        ],
+        "hallucinated_objects": [
+            "man",
+            "grass"
+        ]
+    },
+    {
+        "image": "000000434494.jpg",
+        "caption": "a man standing next to a truck",
+        "ground_truth_objects": [
+            "person",
+            "truck"
+        ],
+        "hallucinated_objects": [
+            "man"
+        ]
+    },
+    {
+        "image": "000000191738.jpg",
+        "caption": "a cat sitting in a stuffed animal chair",
+        "ground_truth_objects": [
+            "cat",
+            "couch"
+        ],
+        "hallucinated_objects": [
+            "animal",
+            "chair"
+        ]
+    },
+    {
+        "image": "000000542510.jpg",
+        "caption": "a man pulling a cart",
+        "ground_truth_objects": [
+            "person",
+            "car",
+            "truck"
+        ],
+        "hallucinated_objects": [
+            "cart",
+            "man"
+        ]
+    },
+    {
+        "image": "000000171500.jpg",
+        "caption": "a truck on a dirt road",
+        "ground_truth_objects": [
+            "stop sign",
+            "truck"
+        ],
+        "hallucinated_objects": [
+            "road",
+            "dirt"
+        ]
+    },
+    {
+        "image": "000000472795.jpg",
+        "caption": "a cow is eating grass on the sidewalk",
+        "ground_truth_objects": [
+            "dining table",
+            "cow",
+            "book",
+            "umbrella",
+            "person",
+            "chair"
+        ],
+        "hallucinated_objects": [
+            "sidewalk",
+            "grass"
+        ]
+    },
+    {
+        "image": "000000182784.jpg",
+        "caption": "a cow standing in front of a market",
+        "ground_truth_objects": [
+            "bottle",
+            "apple",
+            "suitcase",
+            "orange",
+            "cow",
+            "bowl",
+            "bicycle",
+            "motorcycle",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "front",
+            "market"
+        ]
+    },
+    {
+        "image": "000000054088.jpg",
+        "caption": "a tow truck driving down a street next to a white car",
+        "ground_truth_objects": [
+            "handbag",
+            "person",
+            "car",
+            "truck"
+        ],
+        "hallucinated_objects": [
+            "street",
+            "tow"
+        ]
+    },
+    {
+        "image": "000000224861.jpg",
+        "caption": "a cat sitting on top of a suitcase",
+        "ground_truth_objects": [
+            "cat",
+            "suitcase",
+            "book"
+        ],
+        "hallucinated_objects": [
+            "top"
+        ]
+    },
+    {
+        "image": "000000319865.jpg",
+        "caption": "a cat is sitting in a suitcase with clothes",
+        "ground_truth_objects": [
+            "cat",
+            "suitcase"
+        ],
+        "hallucinated_objects": [
+            "clothe"
+        ]
+    },
+    {
+        "image": "000000480076.jpg",
+        "caption": "a cat sitting on a chair in a living room",
+        "ground_truth_objects": [
+            "cat",
+            "chair",
+            "remote"
+        ],
+        "hallucinated_objects": [
+            "living",
+            "room"
+        ]
+    },
+    {
+        "image": "000000346207.jpg",
+        "caption": "a cat laying on a desk",
+        "ground_truth_objects": [
+            "cat",
+            "keyboard",
+            "teddy bear",
+            "laptop",
+            "book",
+            "cup",
+            "tv"
+        ],
+        "hallucinated_objects": [
+            "desk"
+        ]
+    },
+    {
+        "image": "000000490081.jpg",
+        "caption": "a man driving a cart",
+        "ground_truth_objects": [
+            "person",
+            "cow"
+        ],
+        "hallucinated_objects": [
+            "cart",
+            "man"
+        ]
+    },
+    {
+        "image": "000000571034.jpg",
+        "caption": "a group of cows",
+        "ground_truth_objects": [
+            "person",
+            "cow"
+        ],
+        "hallucinated_objects": [
+            "group"
+        ]
+    },
+    {
+        "image": "000000372979.jpg",
+        "caption": "a cat is sitting on a window sie",
+        "ground_truth_objects": [
+            "cat",
+            "chair"
+        ],
+        "hallucinated_objects": [
+            "window",
+            "sie"
+        ]
+    },
+    {
+        "image": "000000383406.jpg",
+        "caption": "a cat laying on a computer",
+        "ground_truth_objects": [
+            "cat",
+            "cell phone",
+            "bottle",
+            "keyboard",
+            "sports ball",
+            "bowl",
+            "mouse",
+            "tv"
+        ],
+        "hallucinated_objects": [
+            "computer"
+        ]
+    },
+    {
+        "image": "000000013383.jpg",
+        "caption": "a cat laying on a desk next to a keyboard",
+        "ground_truth_objects": [
+            "cat",
+            "keyboard",
+            "cup"
+        ],
+        "hallucinated_objects": [
+            "desk"
+        ]
+    },
+    {
+        "image": "000000205378.jpg",
+        "caption": "a cat looking at a computer screen",
+        "ground_truth_objects": [
+            "cat",
+            "laptop"
+        ],
+        "hallucinated_objects": [
+            "screen",
+            "computer"
+        ]
+    },
+    {
+        "image": "000000551952.jpg",
+        "caption": "a white truck with a bike rack attached to the back",
+        "ground_truth_objects": [
+            "car",
+            "bicycle",
+            "truck"
+        ],
+        "hallucinated_objects": [
+            "bike",
+            "rack",
+            "back"
+        ]
+    },
+    {
+        "image": "000000010694.jpg",
+        "caption": "a cat sitting on top of a television",
+        "ground_truth_objects": [
+            "cat",
+            "tv"
+        ],
+        "hallucinated_objects": [
+            "television",
+            "top"
+        ]
+    },
+    {
+        "image": "000000143824.jpg",
+        "caption": "a cat sitting on a tv stand in front of a television",
+        "ground_truth_objects": [
+            "cat",
+            "dog",
+            "tv",
+            "potted plant"
+        ],
+        "hallucinated_objects": [
+            "stand",
+            "television",
+            "front"
+        ]
+    },
+    {
+        "image": "000000037907.jpg",
+        "caption": "a cat sitting on top of a tv set",
+        "ground_truth_objects": [
+            "cat",
+            "tv",
+            "potted plant"
+        ],
+        "hallucinated_objects": [
+            "set",
+            "top"
+        ]
+    },
+    {
+        "image": "000000181449.jpg",
+        "caption": "a cat is laying on a blanket next to a cell",
+        "ground_truth_objects": [
+            "cat",
+            "cell phone",
+            "remote"
+        ],
+        "hallucinated_objects": [
+            "blanket",
+            "cell"
+        ]
+    },
+    {
+        "image": "000000171062.jpg",
+        "caption": "a cat sitting on a table watching a television",
+        "ground_truth_objects": [
+            "cat",
+            "tv",
+            "dining table"
+        ],
+        "hallucinated_objects": [
+            "television",
+            "table"
+        ]
+    },
+    {
+        "image": "000000142667.jpg",
+        "caption": "a group of people standing around a food truck",
+        "ground_truth_objects": [
+            "person",
+            "backpack",
+            "traffic light",
+            "truck"
+        ],
+        "hallucinated_objects": [
+            "food",
+            "people",
+            "group"
+        ]
+    },
+    {
+        "image": "000000122390.jpg",
+        "caption": "a cat laying on a laptop",
+        "ground_truth_objects": [
+            "cat",
+            "keyboard"
+        ],
+        "hallucinated_objects": [
+            "laptop"
+        ]
+    },
+    {
+        "image": "000000099734.jpg",
+        "caption": "a man in a boat",
+        "ground_truth_objects": [
+            "boat",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "man"
+        ]
+    },
+    {
+        "image": "000000000400.jpg",
+        "caption": "a dog is sitting on the back of a boat",
+        "ground_truth_objects": [
+            "dog",
+            "boat"
+        ],
+        "hallucinated_objects": [
+            "back"
+        ]
+    },
+    {
+        "image": "000000245201.jpg",
+        "caption": "a dog is sitting in a boat on the water",
+        "ground_truth_objects": [
+            "dog",
+            "boat"
+        ],
+        "hallucinated_objects": [
+            "water"
+        ]
+    },
+    {
+        "image": "000000350694.jpg",
+        "caption": "a group of boats",
+        "ground_truth_objects": [
+            "boat",
+            "person",
+            "umbrella"
+        ],
+        "hallucinated_objects": [
+            "group"
+        ]
+    },
+    {
+        "image": "000000232383.jpg",
+        "caption": "a cat is sitting on top of a laptop",
+        "ground_truth_objects": [
+            "cat",
+            "tv",
+            "laptop"
+        ],
+        "hallucinated_objects": [
+            "top"
+        ]
+    },
+    {
+        "image": "000000178592.jpg",
+        "caption": "the sky is blue",
+        "ground_truth_objects": [
+            "elephant",
+            "zebra"
+        ],
+        "hallucinated_objects": [
+            "sky"
+        ]
+    },
+    {
+        "image": "000000328421.jpg",
+        "caption": "a herd of elephants walking through a field",
+        "ground_truth_objects": [
+            "cow",
+            "elephant",
+            "zebra"
+        ],
+        "hallucinated_objects": [
+            "herd",
+            "field"
+        ]
+    },
+    {
+        "image": "000000457754.jpg",
+        "caption": "three men sitting at a table",
+        "ground_truth_objects": [
+            "tie",
+            "clock",
+            "book",
+            "person",
+            "chair"
+        ],
+        "hallucinated_objects": [
+            "man",
+            "table"
+        ]
+    },
+    {
+        "image": "000000109819.jpg",
+        "caption": "a group of people riding motorcycles down a street",
+        "ground_truth_objects": [
+            "elephant",
+            "truck",
+            "bus",
+            "traffic light",
+            "motorcycle",
+            "person",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "street",
+            "people",
+            "group"
+        ]
+    },
+    {
+        "image": "000000260141.jpg",
+        "caption": "a group of boats",
+        "ground_truth_objects": [
+            "boat",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "group"
+        ]
+    },
+    {
+        "image": "000000007682.jpg",
+        "caption": "a man with a mustache",
+        "ground_truth_objects": [
+            "tie",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "man",
+            "mustache"
+        ]
+    },
+    {
+        "image": "000000540264.jpg",
+        "caption": "a man fixing his tie",
+        "ground_truth_objects": [
+            "tie",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "man"
+        ]
+    },
+    {
+        "image": "000000246809.jpg",
+        "caption": "a body of water",
+        "ground_truth_objects": [
+            "boat",
+            "person",
+            "bird"
+        ],
+        "hallucinated_objects": [
+            "water",
+            "body"
+        ]
+    },
+    {
+        "image": "000000102843.jpg",
+        "caption": "a boat is in the water near a lighthouse",
+        "ground_truth_objects": [
+            "boat",
+            "person",
+            "bird"
+        ],
+        "hallucinated_objects": [
+            "lighthouse",
+            "water"
+        ]
+    },
+    {
+        "image": "000000440646.jpg",
+        "caption": "a man sitting on a chair",
+        "ground_truth_objects": [
+            "tie",
+            "dining table",
+            "person",
+            "chair",
+            "hair drier"
+        ],
+        "hallucinated_objects": [
+            "man"
+        ]
+    },
+    {
+        "image": "000000242499.jpg",
+        "caption": "a group of people riding elephants through a river",
+        "ground_truth_objects": [
+            "person",
+            "elephant"
+        ],
+        "hallucinated_objects": [
+            "river",
+            "people",
+            "group"
+        ]
+    },
+    {
+        "image": "000000511204.jpg",
+        "caption": "a man riding an elephant",
+        "ground_truth_objects": [
+            "person",
+            "elephant"
+        ],
+        "hallucinated_objects": [
+            "man"
+        ]
+    },
+    {
+        "image": "000000030255.jpg",
+        "caption": "a boat is going under a bridge",
+        "ground_truth_objects": [
+            "boat",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "bridge"
+        ]
+    },
+    {
+        "image": "000000557981.jpg",
+        "caption": "a man holding an umbrella and a stuffed animal",
+        "ground_truth_objects": [
+            "person",
+            "umbrella",
+            "teddy bear"
+        ],
+        "hallucinated_objects": [
+            "animal",
+            "man"
+        ]
+    },
+    {
+        "image": "000000260166.jpg",
+        "caption": "a group of people riding on the back of elephants",
+        "ground_truth_objects": [
+            "person",
+            "elephant"
+        ],
+        "hallucinated_objects": [
+            "people",
+            "back",
+            "group"
+        ]
+    },
+    {
+        "image": "000000217005.jpg",
+        "caption": "leaves on the ground",
+        "ground_truth_objects": [],
+        "hallucinated_objects": [
+            "ground",
+            "leave"
+        ]
+    },
+    {
+        "image": "000000529917.jpg",
+        "caption": "a group of people standing around a table",
+        "ground_truth_objects": [
+            "tie",
+            "person",
+            "bench",
+            "handbag"
+        ],
+        "hallucinated_objects": [
+            "people",
+            "table",
+            "group"
+        ]
+    },
+    {
+        "image": "000000451872.jpg",
+        "caption": "the elephants are in a zoo",
+        "ground_truth_objects": [
+            "person",
+            "elephant"
+        ],
+        "hallucinated_objects": [
+            "zoo"
+        ]
+    },
+    {
+        "image": "000000247306.jpg",
+        "caption": "a boat in the water",
+        "ground_truth_objects": [
+            "boat",
+            "person",
+            "bird"
+        ],
+        "hallucinated_objects": [
+            "water"
+        ]
+    },
+    {
+        "image": "000000420532.jpg",
+        "caption": "a man in a suit and tie",
+        "ground_truth_objects": [
+            "tie",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "man",
+            "suit"
+        ]
+    },
+    {
+        "image": "000000154202.jpg",
+        "caption": "a bed with a laptop, laptop, and other items",
+        "ground_truth_objects": [
+            "cell phone",
+            "laptop",
+            "book",
+            "umbrella",
+            "mouse",
+            "bed",
+            "backpack"
+        ],
+        "hallucinated_objects": [
+            "item"
+        ]
+    },
+    {
+        "image": "000000421478.jpg",
+        "caption": "a man wearing a tie",
+        "ground_truth_objects": [
+            "tie",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "man"
+        ]
+    },
+    {
+        "image": "000000387173.jpg",
+        "caption": "a person in a kayak",
+        "ground_truth_objects": [
+            "boat",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "kayak"
+        ]
+    },
+    {
+        "image": "000000289899.jpg",
+        "caption": "a couple of people riding a boat on a river",
+        "ground_truth_objects": [
+            "boat",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "river",
+            "couple",
+            "people"
+        ]
+    },
+    {
+        "image": "000000419281.jpg",
+        "caption": "a lot of boats",
+        "ground_truth_objects": [
+            "boat",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "lot"
+        ]
+    },
+    {
+        "image": "000000069946.jpg",
+        "caption": "a body of water",
+        "ground_truth_objects": [
+            "boat",
+            "person",
+            "car"
+        ],
+        "hallucinated_objects": [
+            "water",
+            "body"
+        ]
+    },
+    {
+        "image": "000000077184.jpg",
+        "caption": "a boat in the water",
+        "ground_truth_objects": [
+            "boat",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "water"
+        ]
+    },
+    {
+        "image": "000000014990.jpg",
+        "caption": "two elephants standing in a dirt field",
+        "ground_truth_objects": [
+            "handbag",
+            "person",
+            "elephant"
+        ],
+        "hallucinated_objects": [
+            "dirt",
+            "field"
+        ]
+    },
+    {
+        "image": "000000167854.jpg",
+        "caption": "a woman holding two umbrellas on a beach",
+        "ground_truth_objects": [
+            "boat",
+            "person",
+            "umbrella"
+        ],
+        "hallucinated_objects": [
+            "woman",
+            "beach"
+        ]
+    },
+    {
+        "image": "000000032965.jpg",
+        "caption": "a woman holding an umbrella on a beach",
+        "ground_truth_objects": [
+            "boat",
+            "person",
+            "umbrella"
+        ],
+        "hallucinated_objects": [
+            "woman",
+            "beach"
+        ]
+    },
+    {
+        "image": "000000553442.jpg",
+        "caption": "a woman holding a child",
+        "ground_truth_objects": [
+            "suitcase",
+            "handbag",
+            "person"
+        ],
+        "hallucinated_objects": [
+            "woman",
+            "child"
+        ]
+    },
+    {
+        "image": "000000240903.jpg",
+        "caption": "a man is watching an elephant in a zoo",
+        "ground_truth_objects": [
+            "cell phone",
+            "person",
+            "sports ball",
+            "elephant"
+        ],
+        "hallucinated_objects": [
+            "man",
+            "zoo"
+        ]
+    },
+    {
+        "image": "000000323682.jpg",
+        "caption": "a man holding a skateboard in a garage",
+        "ground_truth_objects": [
+            "bottle",
+            "suitcase",
+            "person",
+            "backpack"
+        ],
+        "hallucinated_objects": [
+            "garage",
+            "man",
+            "skateboard"
+        ]
+    },
+    {
+        "image": "000000304305.jpg",
+        "caption": "a mother elephant and her baby elephant",
+        "ground_truth_objects": [
+            "person",
+            "elephant"
+        ],
+        "hallucinated_objects": [
+            "baby",
+            "mother"
+        ]
+    }
+]

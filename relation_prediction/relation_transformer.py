@@ -29,7 +29,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .vg_dataset import GEO_DIM, POSE_FEATURE_DIM, UNION_FEATURE_DIM
+from utils.logger_utils import debug_print
+
+from .vg_dataset import GEO_DIM, POSE_FEATURE_DIM, POSE_OBJECT_FEATURE_DIM, UNION_FEATURE_DIM
 
 
 class _AttentionEncoderLayer(nn.TransformerEncoderLayer):
@@ -137,6 +139,7 @@ class RelationTransformer(nn.Module):
         embed_dim: int = 64,
         clip_dim: int = 0,
         pose_dim: int = 0,
+        pose_object_dim: int = 0,
         union_dim: int = 0,
     ) -> None:
         super().__init__()
@@ -144,6 +147,7 @@ class RelationTransformer(nn.Module):
         self.d_model = d_model
         self.clip_dim = clip_dim
         self.pose_dim = pose_dim
+        self.pose_object_dim = pose_object_dim
         self.union_dim = union_dim
         self.embed_dim = embed_dim
         self.num_predicates = num_predicates
@@ -163,11 +167,14 @@ class RelationTransformer(nn.Module):
             self.union_proj = nn.Linear(union_dim, d_model)
         if pose_dim > 0:
             self.pose_proj = nn.Linear(pose_dim, d_model)
+        if pose_object_dim > 0:
+            self.pose_object_proj = nn.Linear(pose_object_dim, d_model)
 
         # ── Learned modality embeddings ──
         # Indices: 0=subj_label, 1=obj_label, 2=geo,
-        #          3=subj_clip, 4=obj_clip, 5=union, 6=pose
-        self.modality_emb = nn.Parameter(torch.randn(7, d_model))
+        #          3=subj_clip, 4=obj_clip, 5=union, 6=pose, 7=pose_object
+        num_modalities = 7 + (1 if pose_object_dim > 0 else 0)
+        self.modality_emb = nn.Parameter(torch.randn(num_modalities, d_model))
 
         # ── Transformer encoder ──
         # Tokens attend to each other for interaction reasoning
@@ -255,7 +262,7 @@ class RelationTransformer(nn.Module):
                 if attn_weights is not None and isinstance(attn_weights, torch.Tensor):
                     store.append(attn_weights.detach().cpu())
                 elif attn_weights is None:
-                    print(f"[attention] weights missing from {type(module).__name__}")
+                    debug_print(f"[attention] weights missing from {type(module).__name__}")
         return hook
 
     def get_attention_summary(
@@ -291,6 +298,7 @@ class RelationTransformer(nn.Module):
         modality_names = {
             0: "subj_label", 1: "obj_label", 2: "geo",
             3: "subj_clip", 4: "obj_clip", 5: "union_clip", 6: "pose",
+            7: "pose_object",
         }
 
         num_predicates = cross_attn.shape[0]
@@ -332,6 +340,8 @@ class RelationTransformer(nn.Module):
         obj_feat: Optional[torch.Tensor] = None,
         union_feat: Optional[torch.Tensor] = None,
         pose_feat: Optional[torch.Tensor] = None,
+        pose_object_feat: Optional[torch.Tensor] = None,
+        geo_dropout_prob: float = 0.0,
     ) -> Tuple[torch.Tensor, List[int]]:
         tokens: List[torch.Tensor] = []
         mod_ids: List[int] = []
@@ -344,7 +354,10 @@ class RelationTransformer(nn.Module):
         tokens.append(self.obj_label_proj(oe).unsqueeze(1))
         mod_ids.append(1)
 
-        # Token 2: geometry
+        # Token 2: geometry (with optional modality dropout)
+        if self.training and geo_dropout_prob > 0.0:
+            if torch.rand(1).item() < geo_dropout_prob:
+                geo = torch.zeros_like(geo)
         tokens.append(self.geo_proj(geo).unsqueeze(1))
         mod_ids.append(2)
 
@@ -368,6 +381,11 @@ class RelationTransformer(nn.Module):
             tokens.append(self.pose_proj(pose_feat).unsqueeze(1))
             mod_ids.append(6)
 
+        # Token 7: pose_object
+        if hasattr(self, 'pose_object_proj') and pose_object_feat is not None:
+            tokens.append(self.pose_object_proj(pose_object_feat).unsqueeze(1))
+            mod_ids.append(7)
+
         x = torch.cat(tokens, dim=1)
 
         mod_emb = self.modality_emb[mod_ids].unsqueeze(0)
@@ -388,6 +406,8 @@ class RelationTransformer(nn.Module):
         obj_feat: Optional[torch.Tensor] = None,
         union_feat: Optional[torch.Tensor] = None,
         pose_feat: Optional[torch.Tensor] = None,
+        pose_object_feat: Optional[torch.Tensor] = None,
+        geo_dropout_prob: float = 0.0,
     ) -> torch.Tensor:
         if self._capture_attn:
             self._clear_attn_weights()
@@ -397,7 +417,7 @@ class RelationTransformer(nn.Module):
         se = self.label_emb(subj_idx)
         oe = self.label_emb(obj_idx)
 
-        x, _ = self._build_tokens(se, oe, geo, subj_feat, obj_feat, union_feat, pose_feat)
+        x, _ = self._build_tokens(se, oe, geo, subj_feat, obj_feat, union_feat, pose_feat, pose_object_feat, geo_dropout_prob=geo_dropout_prob)
 
         memory = self.encoder(x)
 
@@ -436,6 +456,7 @@ class RelationTransformer(nn.Module):
                 subj_idx, obj_idx, geo,
                 subj_feat=subj_feat, obj_feat=obj_feat,
                 union_feat=union_feat, pose_feat=pose_feat,
+                pose_object_feat=None,
             )
 
         if not was_capturing:
@@ -451,15 +472,20 @@ class RelationTransformer(nn.Module):
             cross_attn = cross_attn.mean(dim=0)
 
         num_preds = cross_attn.shape[0]
-        if cross_attn.shape[1] == 7:
-            return {
-                "subj_label": cross_attn[:, 0].sum().item(),
-                "obj_label": cross_attn[:, 1].sum().item(),
-                "geo": cross_attn[:, 2].sum().item(),
-                "subj_clip": cross_attn[:, 3].sum().item() if cross_attn.shape[1] > 3 else 0.0,
-                "obj_clip": cross_attn[:, 4].sum().item() if cross_attn.shape[1] > 4 else 0.0,
-                "union_clip": cross_attn[:, 5].sum().item() if cross_attn.shape[1] > 5 else 0.0,
-                "pose": cross_attn[:, 6].sum().item() if cross_attn.shape[1] > 6 else 0.0,
-            }
-
-        return {}
+        num_mods = cross_attn.shape[1]
+        result = {
+            "subj_label": cross_attn[:, 0].sum().item() if num_mods > 0 else 0.0,
+            "obj_label": cross_attn[:, 1].sum().item() if num_mods > 1 else 0.0,
+            "geo": cross_attn[:, 2].sum().item() if num_mods > 2 else 0.0,
+        }
+        if num_mods > 3:
+            result["subj_clip"] = cross_attn[:, 3].sum().item()
+        if num_mods > 4:
+            result["obj_clip"] = cross_attn[:, 4].sum().item()
+        if num_mods > 5:
+            result["union_clip"] = cross_attn[:, 5].sum().item()
+        if num_mods > 6:
+            result["pose"] = cross_attn[:, 6].sum().item()
+        if num_mods > 7:
+            result["pose_object"] = cross_attn[:, 7].sum().item()
+        return result

@@ -26,7 +26,7 @@ from PIL import Image
 
 from .clip_extractor import CLIPExtractor, CLIP_DIM
 from .clip_cache import ClipCache
-from .pose_extractor import PoseExtractor, POSE_FEATURE_DIM
+from .pose_extractor import PoseExtractor, POSE_FEATURE_DIM, POSE_OBJECT_FEATURE_DIM
 
 
 # ---------------------------------------------------------------------------
@@ -120,6 +120,7 @@ MIN_BOX_SIZE = 10  # minimum box dimension (pixels) for meaningful CLIP crops
 
 # Interaction-aware feature dimensions (optional, backward-compatible).
 POSE_FEATURE_DIM  = 20   # compact pose features from PoseExtractor (see pose_extractor.py)
+POSE_OBJECT_FEATURE_DIM = 7  # interaction-aware pose-object relative features
 UNION_FEATURE_DIM = CLIP_DIM  # union-region CLIP embedding, same dim as single crop
 
 
@@ -220,6 +221,7 @@ class VGRelationshipDataset(Dataset):
         force_rebuild_cache: bool = False,
         require_visual: bool = False,
         use_pose: bool = False,
+        use_pose_object: bool = False,
         use_union: bool = False,
     ) -> None:
         if require_visual and not use_visual:
@@ -228,6 +230,8 @@ class VGRelationshipDataset(Dataset):
             raise ValueError("use_union=True requires use_visual=True")
         if use_pose and not use_visual:
             raise ValueError("use_pose=True requires use_visual=True")
+        if use_pose_object and not use_pose:
+            raise ValueError("use_pose_object=True requires use_pose=True")
 
         self.label_vocab = label_vocab if label_vocab is not None else Vocab()
         self.pred_vocab  = pred_vocab  if pred_vocab  is not None else Vocab()
@@ -237,6 +241,7 @@ class VGRelationshipDataset(Dataset):
         self.use_visual = use_visual
         self.require_visual = require_visual
         self.use_pose = use_pose
+        self.use_pose_object = use_pose_object
         self.use_union = use_union
         self.clip_extractor: Optional[CLIPExtractor] = None
         self.pose_extractor: Optional[PoseExtractor] = None
@@ -263,7 +268,8 @@ class VGRelationshipDataset(Dataset):
         # Interaction-aware feature caches (union-region CLIP, pose features).
         self.union_feats: List[torch.Tensor] = []
         self.pose_feats: List[torch.Tensor] = []
-        if use_visual and (use_union or use_pose):
+        self.pose_object_feats: List[torch.Tensor] = []
+        if use_visual and (use_union or use_pose or use_pose_object):
             self._init_interaction_cache()
 
         # --- dataset inspection logging ---
@@ -562,6 +568,7 @@ class VGRelationshipDataset(Dataset):
         n = len(self.samples)
         self.union_feats = [torch.zeros(UNION_FEATURE_DIM) for _ in range(n)]
         self.pose_feats = [torch.zeros(POSE_FEATURE_DIM) for _ in range(n)]
+        self.pose_object_feats = [torch.zeros(POSE_OBJECT_FEATURE_DIM) for _ in range(n)]
 
         if self.vg_image_dir is None or not os.path.isdir(self.vg_image_dir):
             print("[VG] Interaction cache: no images dir, using zeros.")
@@ -699,6 +706,11 @@ class VGRelationshipDataset(Dataset):
                             pose_success += 1
                         else:
                             pose_fail += 1
+                        # Pose-object interaction features.
+                        if self.use_pose_object:
+                            poemb = self.pose_extractor.extract_pose_object_features(pil_img, subj_box, obj_box)
+                            if poemb is not None:
+                                self.pose_object_feats[idx] = poemb.clone()
                     else:
                         skipped_non_person += 1
 
@@ -708,13 +720,16 @@ class VGRelationshipDataset(Dataset):
 
         union_count = sum(1 for f in self.union_feats if f.norm().item() > 0) if self.use_union else 0
         pose_count = sum(1 for f in self.pose_feats if f.norm().item() > 0) if self.use_pose else 0
-        print(f"[VG] Interaction cache built: {union_count} union, {pose_count} pose features")
+        pose_object_count = sum(1 for f in self.pose_object_feats if f.norm().item() > 0) if self.use_pose_object else 0
+        print(f"[VG] Interaction cache built: {union_count} union, {pose_count} pose, {pose_object_count} pose_object features")
         print(f"[VG]   Total unique images resolved:     {processed}")
         print(f"[VG]   Total image pairs processed:      {total_samples_processed}")
         if self.use_union:
             print(f"[VG]   Successful union features:       {union_success}")
         if self.use_pose:
             print(f"[VG]   Successful pose features:        {pose_success}")
+            if self.use_pose_object:
+                print(f"[VG]   Successful pose-object features: {pose_object_count}")
             print(f"[VG]   Failed pose detections:          {pose_fail}")
             print(f"[VG]   Person samples:                  {person_samples}")
             print(f"[VG]   Skipped (non-person subject):    {skipped_non_person}")
@@ -887,7 +902,111 @@ class VGRelationshipDataset(Dataset):
                 pf = self.pose_feats[idx] if idx < len(self.pose_feats) else torch.zeros(POSE_FEATURE_DIM)
                 result = result + (pf.clone(),)
 
+            if self.use_pose_object:
+                pof = self.pose_object_feats[idx] if idx < len(self.pose_object_feats) else torch.zeros(POSE_OBJECT_FEATURE_DIM)
+                result = result + (pof.clone(),)
+
         return result
+
+
+# ---------------------------------------------------------------------------
+# Predicate prior computation for logit debiasing
+# ---------------------------------------------------------------------------
+
+def compute_predicate_priors(
+    pred_vocab: Vocab,
+    predicate_distribution: Optional[Dict[str, int]] = None,
+    training_meta_path: Optional[str] = None,
+    vg_relationships_path: Optional[str] = None,
+    vg_image_data_path: Optional[str] = None,
+    smoothing: float = 1e-6,
+) -> Dict[str, float]:
+    """Compute global predicate frequency priors for logit debiasing.
+
+    Args:
+        pred_vocab: Predicate vocabulary.
+        predicate_distribution: Dict mapping predicate name to count.
+        training_meta_path: Path to training_meta.json (fallback).
+        vg_relationships_path: Path to VG relationships.json (fallback).
+        vg_image_data_path: Path to VG image_data.json (fallback).
+        smoothing: Additive smoothing for rare predicates.
+
+    Returns:
+        Dict mapping predicate name to normalized probability.
+    """
+    counts: Dict[str, int] = {}
+
+    if predicate_distribution is not None:
+        counts = dict(predicate_distribution)
+    elif training_meta_path and os.path.exists(training_meta_path):
+        with open(training_meta_path) as f:
+            meta = json.load(f)
+        counts = meta.get("predicate_distribution", {})
+
+    if not counts and vg_relationships_path and vg_image_data_path:
+        counts = _compute_predicate_counts_from_vg(
+            vg_relationships_path, vg_image_data_path, pred_vocab,
+        )
+
+    if not counts:
+        raise ValueError(
+            "Cannot compute predicate priors. Provide predicate_distribution, "
+            "training_meta_path, or vg_relationships_path."
+        )
+
+    total = sum(counts.values()) + smoothing * len(pred_vocab)
+    priors: Dict[str, float] = {}
+    for pred_name in pred_vocab._idx2tok:
+        if pred_name in (Vocab.PAD, Vocab.UNK):
+            continue
+        raw_count = counts.get(pred_name, 0)
+        priors[pred_name] = (raw_count + smoothing) / total
+
+    return priors
+
+
+def _compute_predicate_counts_from_vg(
+    rel_path: str,
+    img_path: str,
+    pred_vocab: Vocab,
+) -> Dict[str, int]:
+    """Compute predicate frequencies directly from VG relationship data."""
+    from collections import Counter
+    with open(img_path) as f:
+        img_meta = json.load(f)
+    with open(rel_path) as f:
+        all_rels = json.load(f)
+
+    counts: Counter = Counter()
+    for img in all_rels:
+        for r in img.get("relationships", []):
+            pred = normalize_predicate(r.get("predicate", ""))
+            if pred is None:
+                continue
+            if pred not in pred_vocab._tok2idx:
+                continue
+            counts[pred] += 1
+    return dict(counts)
+
+
+def save_predicate_priors(
+    priors: Dict[str, float],
+    output_path: str,
+) -> None:
+    """Save predicate priors to JSON."""
+    os.makedirs(os.path.dirname(output_path) if os.path.dirname(output_path) else ".", exist_ok=True)
+    with open(output_path, "w") as f:
+        json.dump(priors, f, indent=2)
+    print(f"[predicate_priors] Saved to {output_path}")
+
+
+def load_predicate_priors(path: str) -> Dict[str, float]:
+    """Load predicate priors from JSON."""
+    if not os.path.exists(path):
+        print(f"[predicate_priors] File not found: {path}")
+        return {}
+    with open(path) as f:
+        return json.load(f)
 
 
 # ---------------------------------------------------------------------------

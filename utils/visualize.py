@@ -28,6 +28,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 from utils.causal_caption import extract_top_detections, infer_relationships, generate_causal_caption
+from utils.logger_utils import debug_print
 
 
 # ImageNet statistics used during dataset normalization
@@ -88,7 +89,7 @@ def draw_relation_boxes(
     try:
         from PIL import ImageDraw, ImageFont, Image as PILImage
     except ImportError:
-        print("[visualize] PIL not available — skipping draw_relation_boxes")
+        debug_print("[visualize] PIL not available \u2014 skipping draw_relation_boxes")
         return
 
     if isinstance(image, torch.Tensor):
@@ -162,7 +163,7 @@ def draw_relation_boxes(
             y += 18
 
     pil.save(output_path)
-    print(f"[visualize] Saved relation visualization to {output_path}")
+    debug_print(f"[visualize] Saved relation visualization to {output_path}")
 
 
 def visualize_predictions(

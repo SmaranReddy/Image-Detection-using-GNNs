@@ -1,0 +1,3899 @@
+{
+  "config": {
+    "image_dir": "test_images",
+    "checkpoints": {
+      "V0": "./checkpoints",
+      "V2": "./checkpoints_v2",
+      "sweep_geo_dropout_0.0": "./checkpoints_sweep\\geo_dropout_0.0",
+      "sweep_geo_dropout_0.1": "./checkpoints_sweep\\geo_dropout_0.1",
+      "sweep_geo_dropout_0.2": "./checkpoints_sweep\\geo_dropout_0.2",
+      "sweep_geo_dropout_0.3": "./checkpoints_sweep\\geo_dropout_0.3",
+      "sweep_geo_dropout_0.4": "./checkpoints_sweep\\geo_dropout_0.4"
+    }
+  },
+  "timestamp": "2026-05-29 12:28:38",
+  "image_metadata": {
+    "test_images\\ambiguous.jpg": {
+      "detections": []
+    },
+    "test_images\\bicycle.jpg": {
+      "detections": [
+        "person",
+        "bicycle",
+        "backpack"
+      ]
+    },
+    "test_images\\car.jpg": {
+      "detections": [
+        "car"
+      ]
+    },
+    "test_images\\carrying_box.jpg": {
+      "detections": []
+    },
+    "test_images\\dog.jpg": {
+      "detections": [
+        "person",
+        "dog"
+      ]
+    },
+    "test_images\\dog_bone.jpg": {
+      "detections": []
+    },
+    "test_images\\horse_riding.jpg": {
+      "detections": []
+    },
+    "test_images\\looking_at.jpg": {
+      "detections": []
+    },
+    "test_images\\multiobject.jpg": {
+      "detections": [
+        "cup",
+        "laptop",
+        "book"
+      ]
+    },
+    "test_images\\sitting.jpg": {
+      "detections": [
+        "person",
+        "potted plant",
+        "chair",
+        "chair"
+      ]
+    },
+    "test_images\\sitting_couch.jpg": {
+      "detections": []
+    },
+    "test_images\\wearing_hat.jpg": {
+      "detections": []
+    }
+  },
+  "predicate_analysis": {
+    "V0": {
+      "per_predicate": {
+        "behind": {
+          "type": "weak_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 4,
+          "total_pairs": 4,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.2066,
+          "confidence_min": 0.1196,
+          "confidence_max": 0.2844,
+          "margin_mean": 0
+        },
+        "carrying": {
+          "type": "semantic",
+          "evidence_type": "pose-heavy",
+          "accepted": 1,
+          "rejected": 1,
+          "total_pairs": 2,
+          "accept_rate": 0.5,
+          "rejection_rate": 0.5,
+          "confidence_mean": 0.2248,
+          "confidence_min": 0,
+          "confidence_max": 0.4495,
+          "margin_mean": 0.0
+        },
+        "in": {
+          "type": "neutral_spatial",
+          "evidence_type": "other",
+          "accepted": 0,
+          "rejected": 2,
+          "total_pairs": 2,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.2172,
+          "confidence_min": 0.1804,
+          "confidence_max": 0.254,
+          "margin_mean": 0
+        },
+        "looking at": {
+          "type": "semantic",
+          "evidence_type": "other",
+          "accepted": 0,
+          "rejected": 2,
+          "total_pairs": 2,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.3155,
+          "confidence_min": 0.2773,
+          "confidence_max": 0.3537,
+          "margin_mean": 0
+        },
+        "near": {
+          "type": "weak_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 3,
+          "total_pairs": 3,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.2064,
+          "confidence_min": 0.1965,
+          "confidence_max": 0.2142,
+          "margin_mean": 0
+        },
+        "on": {
+          "type": "neutral_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 2,
+          "total_pairs": 2,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.2371,
+          "confidence_min": 0.1923,
+          "confidence_max": 0.282,
+          "margin_mean": 0
+        },
+        "riding": {
+          "type": "semantic",
+          "evidence_type": "geometry-heavy",
+          "accepted": 1,
+          "rejected": 1,
+          "total_pairs": 2,
+          "accept_rate": 0.5,
+          "rejection_rate": 0.5,
+          "confidence_mean": 0.295,
+          "confidence_min": 0,
+          "confidence_max": 0.59,
+          "margin_mean": 0.0
+        },
+        "sitting on": {
+          "type": "semantic",
+          "evidence_type": "geometry-heavy",
+          "accepted": 1,
+          "rejected": 2,
+          "total_pairs": 3,
+          "accept_rate": 0.3333,
+          "rejection_rate": 0.6667,
+          "confidence_mean": 0.1993,
+          "confidence_min": 0,
+          "confidence_max": 0.598,
+          "margin_mean": 0.0
+        },
+        "under": {
+          "type": "weak_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 5,
+          "total_pairs": 5,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.2004,
+          "confidence_min": 0.1346,
+          "confidence_max": 0.3426,
+          "margin_mean": 0
+        },
+        "wearing": {
+          "type": "semantic",
+          "evidence_type": "appearance-heavy",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.0,
+          "confidence_min": 0,
+          "confidence_max": 0,
+          "margin_mean": 0
+        }
+      },
+      "total_accepted": 3,
+      "total_rejected": 23,
+      "total_pairs_evaluated": 26,
+      "accept_rate": 0.1154,
+      "semantic_count": 3
+    },
+    "V2": {
+      "per_predicate": {
+        "behind": {
+          "type": "weak_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 3,
+          "total_pairs": 3,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.0843,
+          "confidence_min": 0.0594,
+          "confidence_max": 0.0983,
+          "margin_mean": 0
+        },
+        "carrying": {
+          "type": "semantic",
+          "evidence_type": "pose-heavy",
+          "accepted": 1,
+          "rejected": 2,
+          "total_pairs": 3,
+          "accept_rate": 0.3333,
+          "rejection_rate": 0.6667,
+          "confidence_mean": 0.2292,
+          "confidence_min": 0,
+          "confidence_max": 0.4517,
+          "margin_mean": 0.0
+        },
+        "looking at": {
+          "type": "semantic",
+          "evidence_type": "other",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.0,
+          "confidence_min": 0,
+          "confidence_max": 0,
+          "margin_mean": 0
+        },
+        "near": {
+          "type": "weak_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 8,
+          "total_pairs": 8,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.2045,
+          "confidence_min": 0.1645,
+          "confidence_max": 0.2319,
+          "margin_mean": 0
+        },
+        "on": {
+          "type": "neutral_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 5,
+          "total_pairs": 5,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.2075,
+          "confidence_min": 0.1337,
+          "confidence_max": 0.2508,
+          "margin_mean": 0
+        },
+        "riding": {
+          "type": "semantic",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.0,
+          "confidence_min": 0,
+          "confidence_max": 0,
+          "margin_mean": 0
+        },
+        "sitting on": {
+          "type": "semantic",
+          "evidence_type": "geometry-heavy",
+          "accepted": 1,
+          "rejected": 2,
+          "total_pairs": 3,
+          "accept_rate": 0.3333,
+          "rejection_rate": 0.6667,
+          "confidence_mean": 0.1986,
+          "confidence_min": 0,
+          "confidence_max": 0.5959,
+          "margin_mean": 0.0
+        },
+        "wearing": {
+          "type": "semantic",
+          "evidence_type": "appearance-heavy",
+          "accepted": 1,
+          "rejected": 1,
+          "total_pairs": 2,
+          "accept_rate": 0.5,
+          "rejection_rate": 0.5,
+          "confidence_mean": 0.3838,
+          "confidence_min": 0,
+          "confidence_max": 0.7676,
+          "margin_mean": 0.0
+        }
+      },
+      "total_accepted": 3,
+      "total_rejected": 23,
+      "total_pairs_evaluated": 26,
+      "accept_rate": 0.1154,
+      "semantic_count": 3
+    },
+    "sweep_geo_dropout_0.0": {
+      "per_predicate": {
+        "behind": {
+          "type": "weak_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.1571,
+          "confidence_min": 0.1571,
+          "confidence_max": 0.1571,
+          "margin_mean": 0
+        },
+        "holding": {
+          "type": "semantic",
+          "evidence_type": "pose-heavy",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.2606,
+          "confidence_min": 0.2606,
+          "confidence_max": 0.2606,
+          "margin_mean": 0
+        },
+        "in": {
+          "type": "neutral_spatial",
+          "evidence_type": "other",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.1946,
+          "confidence_min": 0.1946,
+          "confidence_max": 0.1946,
+          "margin_mean": 0
+        },
+        "looking at": {
+          "type": "semantic",
+          "evidence_type": "other",
+          "accepted": 0,
+          "rejected": 2,
+          "total_pairs": 2,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.226,
+          "confidence_min": 0.1979,
+          "confidence_max": 0.2541,
+          "margin_mean": 0
+        },
+        "near": {
+          "type": "weak_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 7,
+          "total_pairs": 7,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.1659,
+          "confidence_min": 0.1256,
+          "confidence_max": 0.2029,
+          "margin_mean": 0
+        },
+        "on": {
+          "type": "neutral_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 4,
+          "total_pairs": 4,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.1744,
+          "confidence_min": 0.1615,
+          "confidence_max": 0.1925,
+          "margin_mean": 0
+        },
+        "riding": {
+          "type": "semantic",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.0,
+          "confidence_min": 0,
+          "confidence_max": 0,
+          "margin_mean": 0
+        },
+        "sitting on": {
+          "type": "semantic",
+          "evidence_type": "geometry-heavy",
+          "accepted": 1,
+          "rejected": 2,
+          "total_pairs": 3,
+          "accept_rate": 0.3333,
+          "rejection_rate": 0.6667,
+          "confidence_mean": 0.1835,
+          "confidence_min": 0,
+          "confidence_max": 0.5505,
+          "margin_mean": 0.0
+        },
+        "wearing": {
+          "type": "semantic",
+          "evidence_type": "appearance-heavy",
+          "accepted": 1,
+          "rejected": 1,
+          "total_pairs": 2,
+          "accept_rate": 0.5,
+          "rejection_rate": 0.5,
+          "confidence_mean": 0.3044,
+          "confidence_min": 0,
+          "confidence_max": 0.6088,
+          "margin_mean": 0.0
+        }
+      },
+      "total_accepted": 2,
+      "total_rejected": 20,
+      "total_pairs_evaluated": 22,
+      "accept_rate": 0.0909,
+      "semantic_count": 2
+    },
+    "sweep_geo_dropout_0.1": {
+      "per_predicate": {
+        "behind": {
+          "type": "weak_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.0669,
+          "confidence_min": 0.0669,
+          "confidence_max": 0.0669,
+          "margin_mean": 0
+        },
+        "carrying": {
+          "type": "semantic",
+          "evidence_type": "pose-heavy",
+          "accepted": 1,
+          "rejected": 2,
+          "total_pairs": 3,
+          "accept_rate": 0.3333,
+          "rejection_rate": 0.6667,
+          "confidence_mean": 0.1879,
+          "confidence_min": 0,
+          "confidence_max": 0.3389,
+          "margin_mean": 0.0
+        },
+        "holding": {
+          "type": "semantic",
+          "evidence_type": "pose-heavy",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.0,
+          "confidence_min": 0,
+          "confidence_max": 0,
+          "margin_mean": 0
+        },
+        "in": {
+          "type": "neutral_spatial",
+          "evidence_type": "other",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.0,
+          "confidence_min": 0,
+          "confidence_max": 0,
+          "margin_mean": 0
+        },
+        "inside": {
+          "type": "weak_spatial",
+          "evidence_type": "other",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.1807,
+          "confidence_min": 0.1807,
+          "confidence_max": 0.1807,
+          "margin_mean": 0
+        },
+        "near": {
+          "type": "weak_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 8,
+          "total_pairs": 8,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.1839,
+          "confidence_min": 0.1192,
+          "confidence_max": 0.2381,
+          "margin_mean": 0
+        },
+        "on": {
+          "type": "neutral_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 6,
+          "total_pairs": 6,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.21,
+          "confidence_min": 0,
+          "confidence_max": 0.3506,
+          "margin_mean": 0
+        },
+        "riding": {
+          "type": "semantic",
+          "evidence_type": "geometry-heavy",
+          "accepted": 1,
+          "rejected": 1,
+          "total_pairs": 2,
+          "accept_rate": 0.5,
+          "rejection_rate": 0.5,
+          "confidence_mean": 0.4135,
+          "confidence_min": 0,
+          "confidence_max": 0.8271,
+          "margin_mean": 0.0
+        },
+        "sitting on": {
+          "type": "semantic",
+          "evidence_type": "geometry-heavy",
+          "accepted": 1,
+          "rejected": 2,
+          "total_pairs": 3,
+          "accept_rate": 0.3333,
+          "rejection_rate": 0.6667,
+          "confidence_mean": 0.2106,
+          "confidence_min": 0,
+          "confidence_max": 0.6319,
+          "margin_mean": 0.0
+        },
+        "under": {
+          "type": "weak_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.1513,
+          "confidence_min": 0.1513,
+          "confidence_max": 0.1513,
+          "margin_mean": 0
+        },
+        "wearing": {
+          "type": "semantic",
+          "evidence_type": "appearance-heavy",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.0,
+          "confidence_min": 0,
+          "confidence_max": 0,
+          "margin_mean": 0
+        }
+      },
+      "total_accepted": 3,
+      "total_rejected": 25,
+      "total_pairs_evaluated": 28,
+      "accept_rate": 0.1071,
+      "semantic_count": 3
+    },
+    "sweep_geo_dropout_0.2": {
+      "per_predicate": {
+        "attached to": {
+          "type": "weak_spatial",
+          "evidence_type": "other",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.2808,
+          "confidence_min": 0.2808,
+          "confidence_max": 0.2808,
+          "margin_mean": 0
+        },
+        "behind": {
+          "type": "weak_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 6,
+          "total_pairs": 6,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.1798,
+          "confidence_min": 0,
+          "confidence_max": 0.3777,
+          "margin_mean": 0
+        },
+        "carrying": {
+          "type": "semantic",
+          "evidence_type": "pose-heavy",
+          "accepted": 1,
+          "rejected": 1,
+          "total_pairs": 2,
+          "accept_rate": 0.5,
+          "rejection_rate": 0.5,
+          "confidence_mean": 0.243,
+          "confidence_min": 0,
+          "confidence_max": 0.4861,
+          "margin_mean": 0.0
+        },
+        "in": {
+          "type": "neutral_spatial",
+          "evidence_type": "other",
+          "accepted": 0,
+          "rejected": 3,
+          "total_pairs": 3,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.2769,
+          "confidence_min": 0,
+          "confidence_max": 0.4422,
+          "margin_mean": 0
+        },
+        "looking at": {
+          "type": "semantic",
+          "evidence_type": "other",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.0,
+          "confidence_min": 0,
+          "confidence_max": 0,
+          "margin_mean": 0
+        },
+        "near": {
+          "type": "weak_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 4,
+          "total_pairs": 4,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.2371,
+          "confidence_min": 0.1752,
+          "confidence_max": 0.3645,
+          "margin_mean": 0
+        },
+        "on": {
+          "type": "neutral_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 2,
+          "total_pairs": 2,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.1532,
+          "confidence_min": 0,
+          "confidence_max": 0.3065,
+          "margin_mean": 0
+        },
+        "riding": {
+          "type": "semantic",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.0,
+          "confidence_min": 0,
+          "confidence_max": 0,
+          "margin_mean": 0
+        },
+        "sitting on": {
+          "type": "semantic",
+          "evidence_type": "geometry-heavy",
+          "accepted": 1,
+          "rejected": 2,
+          "total_pairs": 3,
+          "accept_rate": 0.3333,
+          "rejection_rate": 0.6667,
+          "confidence_mean": 0.2469,
+          "confidence_min": 0,
+          "confidence_max": 0.7408,
+          "margin_mean": 0.0
+        },
+        "under": {
+          "type": "weak_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.1986,
+          "confidence_min": 0.1986,
+          "confidence_max": 0.1986,
+          "margin_mean": 0
+        },
+        "wearing": {
+          "type": "semantic",
+          "evidence_type": "appearance-heavy",
+          "accepted": 1,
+          "rejected": 1,
+          "total_pairs": 2,
+          "accept_rate": 0.5,
+          "rejection_rate": 0.5,
+          "confidence_mean": 0.4485,
+          "confidence_min": 0,
+          "confidence_max": 0.8969,
+          "margin_mean": 0.0
+        }
+      },
+      "total_accepted": 3,
+      "total_rejected": 23,
+      "total_pairs_evaluated": 26,
+      "accept_rate": 0.1154,
+      "semantic_count": 3
+    },
+    "sweep_geo_dropout_0.3": {
+      "per_predicate": {
+        "behind": {
+          "type": "weak_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.1598,
+          "confidence_min": 0.1598,
+          "confidence_max": 0.1598,
+          "margin_mean": 0
+        },
+        "holding": {
+          "type": "semantic",
+          "evidence_type": "pose-heavy",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.0,
+          "confidence_min": 0,
+          "confidence_max": 0,
+          "margin_mean": 0
+        },
+        "in": {
+          "type": "neutral_spatial",
+          "evidence_type": "other",
+          "accepted": 0,
+          "rejected": 3,
+          "total_pairs": 3,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.1964,
+          "confidence_min": 0,
+          "confidence_max": 0.3743,
+          "margin_mean": 0
+        },
+        "in front of": {
+          "type": "weak_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.139,
+          "confidence_min": 0.139,
+          "confidence_max": 0.139,
+          "margin_mean": 0
+        },
+        "looking at": {
+          "type": "semantic",
+          "evidence_type": "other",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.2082,
+          "confidence_min": 0.2082,
+          "confidence_max": 0.2082,
+          "margin_mean": 0
+        },
+        "near": {
+          "type": "weak_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.081,
+          "confidence_min": 0.081,
+          "confidence_max": 0.081,
+          "margin_mean": 0
+        },
+        "on": {
+          "type": "neutral_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 6,
+          "total_pairs": 6,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.2228,
+          "confidence_min": 0,
+          "confidence_max": 0.2927,
+          "margin_mean": 0
+        },
+        "riding": {
+          "type": "semantic",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.5064,
+          "confidence_min": 0.5064,
+          "confidence_max": 0.5064,
+          "margin_mean": 0
+        },
+        "sitting on": {
+          "type": "semantic",
+          "evidence_type": "geometry-heavy",
+          "accepted": 1,
+          "rejected": 3,
+          "total_pairs": 4,
+          "accept_rate": 0.25,
+          "rejection_rate": 0.75,
+          "confidence_mean": 0.2468,
+          "confidence_min": 0,
+          "confidence_max": 0.5421,
+          "margin_mean": 0.0
+        },
+        "under": {
+          "type": "weak_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 4,
+          "total_pairs": 4,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.1381,
+          "confidence_min": 0,
+          "confidence_max": 0.3393,
+          "margin_mean": 0
+        },
+        "wearing": {
+          "type": "semantic",
+          "evidence_type": "appearance-heavy",
+          "accepted": 1,
+          "rejected": 1,
+          "total_pairs": 2,
+          "accept_rate": 0.5,
+          "rejection_rate": 0.5,
+          "confidence_mean": 0.4098,
+          "confidence_min": 0,
+          "confidence_max": 0.8195,
+          "margin_mean": 0.0
+        }
+      },
+      "total_accepted": 2,
+      "total_rejected": 23,
+      "total_pairs_evaluated": 25,
+      "accept_rate": 0.08,
+      "semantic_count": 2
+    },
+    "sweep_geo_dropout_0.4": {
+      "per_predicate": {
+        "behind": {
+          "type": "weak_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 2,
+          "total_pairs": 2,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.197,
+          "confidence_min": 0.1413,
+          "confidence_max": 0.2527,
+          "margin_mean": 0
+        },
+        "holding": {
+          "type": "semantic",
+          "evidence_type": "pose-heavy",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.0,
+          "confidence_min": 0,
+          "confidence_max": 0,
+          "margin_mean": 0
+        },
+        "in": {
+          "type": "neutral_spatial",
+          "evidence_type": "other",
+          "accepted": 0,
+          "rejected": 5,
+          "total_pairs": 5,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.1652,
+          "confidence_min": 0,
+          "confidence_max": 0.2992,
+          "margin_mean": 0
+        },
+        "looking at": {
+          "type": "semantic",
+          "evidence_type": "other",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.2108,
+          "confidence_min": 0.2108,
+          "confidence_max": 0.2108,
+          "margin_mean": 0
+        },
+        "near": {
+          "type": "weak_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.1023,
+          "confidence_min": 0.1023,
+          "confidence_max": 0.1023,
+          "margin_mean": 0
+        },
+        "on": {
+          "type": "neutral_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 4,
+          "total_pairs": 4,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.2368,
+          "confidence_min": 0,
+          "confidence_max": 0.3349,
+          "margin_mean": 0
+        },
+        "riding": {
+          "type": "semantic",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 1,
+          "total_pairs": 1,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.0,
+          "confidence_min": 0,
+          "confidence_max": 0,
+          "margin_mean": 0
+        },
+        "sitting on": {
+          "type": "semantic",
+          "evidence_type": "geometry-heavy",
+          "accepted": 1,
+          "rejected": 3,
+          "total_pairs": 4,
+          "accept_rate": 0.25,
+          "rejection_rate": 0.75,
+          "confidence_mean": 0.1448,
+          "confidence_min": 0,
+          "confidence_max": 0.5793,
+          "margin_mean": 0.0
+        },
+        "under": {
+          "type": "weak_spatial",
+          "evidence_type": "geometry-heavy",
+          "accepted": 0,
+          "rejected": 4,
+          "total_pairs": 4,
+          "accept_rate": 0.0,
+          "rejection_rate": 1.0,
+          "confidence_mean": 0.2819,
+          "confidence_min": 0.1248,
+          "confidence_max": 0.357,
+          "margin_mean": 0
+        },
+        "wearing": {
+          "type": "semantic",
+          "evidence_type": "appearance-heavy",
+          "accepted": 1,
+          "rejected": 1,
+          "total_pairs": 2,
+          "accept_rate": 0.5,
+          "rejection_rate": 0.5,
+          "confidence_mean": 0.4041,
+          "confidence_min": 0,
+          "confidence_max": 0.8082,
+          "margin_mean": 0.0
+        }
+      },
+      "total_accepted": 2,
+      "total_rejected": 23,
+      "total_pairs_evaluated": 25,
+      "accept_rate": 0.08,
+      "semantic_count": 2
+    }
+  },
+  "confidence_histograms": {
+    "V0": {
+      "accepted_conf": {
+        "bins": [
+          "0.00-0.10",
+          "0.10-0.20",
+          "0.20-0.30",
+          "0.30-0.40",
+          "0.40-0.50",
+          "0.50-0.60",
+          "0.60-0.70",
+          "0.70-0.80",
+          "0.80-0.90",
+          "0.90-1.00"
+        ],
+        "counts": [
+          0,
+          0,
+          0,
+          0,
+          1,
+          2,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0.5458,
+        "median": 0.59,
+        "n": 3,
+        "min": 0.4495,
+        "max": 0.598
+      },
+      "rejected_calib_conf": {
+        "bins": [
+          "0.00-0.10",
+          "0.10-0.20",
+          "0.20-0.30",
+          "0.30-0.40",
+          "0.40-0.50",
+          "0.50-0.60",
+          "0.60-0.70",
+          "0.70-0.80",
+          "0.80-0.90",
+          "0.90-1.00"
+        ],
+        "counts": [
+          0,
+          8,
+          8,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0.2215,
+        "median": 0.2084,
+        "n": 18,
+        "min": 0.1196,
+        "max": 0.3537
+      },
+      "rejected_all_conf": {
+        "bins": [
+          "0.00-0.10",
+          "0.10-0.20",
+          "0.20-0.30",
+          "0.30-0.40",
+          "0.40-0.50",
+          "0.50-0.60",
+          "0.60-0.70",
+          "0.70-0.80",
+          "0.80-0.90",
+          "0.90-1.00"
+        ],
+        "counts": [
+          0,
+          8,
+          8,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0.2215,
+        "median": 0.2084,
+        "n": 18,
+        "min": 0.1196,
+        "max": 0.3537
+      },
+      "accepted_margins": {
+        "bins": [],
+        "counts": [],
+        "mean": 0,
+        "n": 0
+      },
+      "rejected_margins": {
+        "bins": [
+          "0.00-0.05",
+          "0.05-0.10",
+          "0.10-0.15",
+          "0.15-0.20",
+          "0.20-0.25",
+          "0.25-0.30",
+          "0.30-0.35",
+          "0.35-0.40",
+          "0.40-0.45",
+          "0.45-0.50"
+        ],
+        "counts": [
+          10,
+          3,
+          1,
+          1,
+          2,
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0.0805,
+        "median": 0.0495,
+        "n": 18,
+        "min": 0.0001,
+        "max": 0.2724
+      }
+    },
+    "V2": {
+      "accepted_conf": {
+        "bins": [
+          "0.00-0.10",
+          "0.10-0.20",
+          "0.20-0.30",
+          "0.30-0.40",
+          "0.40-0.50",
+          "0.50-0.60",
+          "0.60-0.70",
+          "0.70-0.80",
+          "0.80-0.90",
+          "0.90-1.00"
+        ],
+        "counts": [
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          0,
+          1,
+          0,
+          0
+        ],
+        "mean": 0.6051,
+        "median": 0.5959,
+        "n": 3,
+        "min": 0.4517,
+        "max": 0.7676
+      },
+      "rejected_calib_conf": {
+        "bins": [
+          "0.00-0.10",
+          "0.10-0.20",
+          "0.20-0.30",
+          "0.30-0.40",
+          "0.40-0.50",
+          "0.50-0.60",
+          "0.60-0.70",
+          "0.70-0.80",
+          "0.80-0.90",
+          "0.90-1.00"
+        ],
+        "counts": [
+          3,
+          5,
+          9,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0.186,
+        "median": 0.2084,
+        "n": 17,
+        "min": 0.0594,
+        "max": 0.2508
+      },
+      "rejected_all_conf": {
+        "bins": [
+          "0.00-0.10",
+          "0.10-0.20",
+          "0.20-0.30",
+          "0.30-0.40",
+          "0.40-0.50",
+          "0.50-0.60",
+          "0.60-0.70",
+          "0.70-0.80",
+          "0.80-0.90",
+          "0.90-1.00"
+        ],
+        "counts": [
+          3,
+          5,
+          9,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0.186,
+        "median": 0.2084,
+        "n": 17,
+        "min": 0.0594,
+        "max": 0.2508
+      },
+      "accepted_margins": {
+        "bins": [],
+        "counts": [],
+        "mean": 0,
+        "n": 0
+      },
+      "rejected_margins": {
+        "bins": [
+          "0.00-0.05",
+          "0.05-0.10",
+          "0.10-0.15",
+          "0.15-0.20",
+          "0.20-0.25",
+          "0.25-0.30",
+          "0.30-0.35",
+          "0.35-0.40",
+          "0.40-0.45",
+          "0.45-0.50"
+        ],
+        "counts": [
+          10,
+          4,
+          2,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0.0586,
+        "median": 0.0432,
+        "n": 17,
+        "min": 0.0105,
+        "max": 0.1874
+      }
+    },
+    "sweep_geo_dropout_0.0": {
+      "accepted_conf": {
+        "bins": [
+          "0.00-0.10",
+          "0.10-0.20",
+          "0.20-0.30",
+          "0.30-0.40",
+          "0.40-0.50",
+          "0.50-0.60",
+          "0.60-0.70",
+          "0.70-0.80",
+          "0.80-0.90",
+          "0.90-1.00"
+        ],
+        "counts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "mean": 0.5796,
+        "median": 0.6088,
+        "n": 2,
+        "min": 0.5505,
+        "max": 0.6088
+      },
+      "rejected_calib_conf": {
+        "bins": [
+          "0.00-0.10",
+          "0.10-0.20",
+          "0.20-0.30",
+          "0.30-0.40",
+          "0.40-0.50",
+          "0.50-0.60",
+          "0.60-0.70",
+          "0.70-0.80",
+          "0.80-0.90",
+          "0.90-1.00"
+        ],
+        "counts": [
+          0,
+          13,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0.1827,
+        "median": 0.1811,
+        "n": 16,
+        "min": 0.1256,
+        "max": 0.2606
+      },
+      "rejected_all_conf": {
+        "bins": [
+          "0.00-0.10",
+          "0.10-0.20",
+          "0.20-0.30",
+          "0.30-0.40",
+          "0.40-0.50",
+          "0.50-0.60",
+          "0.60-0.70",
+          "0.70-0.80",
+          "0.80-0.90",
+          "0.90-1.00"
+        ],
+        "counts": [
+          0,
+          13,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0.1827,
+        "median": 0.1811,
+        "n": 16,
+        "min": 0.1256,
+        "max": 0.2606
+      },
+      "accepted_margins": {
+        "bins": [],
+        "counts": [],
+        "mean": 0,
+        "n": 0
+      },
+      "rejected_margins": {
+        "bins": [
+          "0.00-0.05",
+          "0.05-0.10",
+          "0.10-0.15",
+          "0.15-0.20",
+          "0.20-0.25",
+          "0.25-0.30",
+          "0.30-0.35",
+          "0.35-0.40",
+          "0.40-0.45",
+          "0.45-0.50"
+        ],
+        "counts": [
+          14,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0.0248,
+        "median": 0.0241,
+        "n": 16,
+        "min": 0.0005,
+        "max": 0.067
+      }
+    },
+    "sweep_geo_dropout_0.1": {
+      "accepted_conf": {
+        "bins": [
+          "0.00-0.10",
+          "0.10-0.20",
+          "0.20-0.30",
+          "0.30-0.40",
+          "0.40-0.50",
+          "0.50-0.60",
+          "0.60-0.70",
+          "0.70-0.80",
+          "0.80-0.90",
+          "0.90-1.00"
+        ],
+        "counts": [
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          1,
+          0,
+          1,
+          0
+        ],
+        "mean": 0.5993,
+        "median": 0.6319,
+        "n": 3,
+        "min": 0.3389,
+        "max": 0.8271
+      },
+      "rejected_calib_conf": {
+        "bins": [
+          "0.00-0.10",
+          "0.10-0.20",
+          "0.20-0.30",
+          "0.30-0.40",
+          "0.40-0.50",
+          "0.50-0.60",
+          "0.60-0.70",
+          "0.70-0.80",
+          "0.80-0.90",
+          "0.90-1.00"
+        ],
+        "counts": [
+          1,
+          7,
+          5,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0.2097,
+        "median": 0.2189,
+        "n": 16,
+        "min": 0.0669,
+        "max": 0.3506
+      },
+      "rejected_all_conf": {
+        "bins": [
+          "0.00-0.10",
+          "0.10-0.20",
+          "0.20-0.30",
+          "0.30-0.40",
+          "0.40-0.50",
+          "0.50-0.60",
+          "0.60-0.70",
+          "0.70-0.80",
+          "0.80-0.90",
+          "0.90-1.00"
+        ],
+        "counts": [
+          2,
+          7,
+          5,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0.1974,
+        "median": 0.1925,
+        "n": 17,
+        "min": 0,
+        "max": 0.3506
+      },
+      "accepted_margins": {
+        "bins": [],
+        "counts": [],
+        "mean": 0,
+        "n": 0
+      },
+      "rejected_margins": {
+        "bins": [
+          "0.00-0.05",
+          "0.05-0.10",
+          "0.10-0.15",
+          "0.15-0.20",
+          "0.20-0.25",
+          "0.25-0.30",
+          "0.30-0.35",
+          "0.35-0.40",
+          "0.40-0.45",
+          "0.45-0.50"
+        ],
+        "counts": [
+          6,
+          1,
+          4,
+          2,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0.1126,
+        "median": 0.119,
+        "n": 16,
+        "min": 0.009,
+        "max": 0.2391
+      }
+    },
+    "sweep_geo_dropout_0.2": {
+      "accepted_conf": {
+        "bins": [
+          "0.00-0.10",
+          "0.10-0.20",
+          "0.20-0.30",
+          "0.30-0.40",
+          "0.40-0.50",
+          "0.50-0.60",
+          "0.60-0.70",
+          "0.70-0.80",
+          "0.80-0.90",
+          "0.90-1.00"
+        ],
+        "counts": [
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          1,
+          1,
+          0
+        ],
+        "mean": 0.7079,
+        "median": 0.7408,
+        "n": 3,
+        "min": 0.4861,
+        "max": 0.8969
+      },
+      "rejected_calib_conf": {
+        "bins": [
+          "0.00-0.10",
+          "0.10-0.20",
+          "0.20-0.30",
+          "0.30-0.40",
+          "0.40-0.50",
+          "0.50-0.60",
+          "0.60-0.70",
+          "0.70-0.80",
+          "0.80-0.90",
+          "0.90-1.00"
+        ],
+        "counts": [
+          1,
+          4,
+          3,
+          5,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0.2603,
+        "median": 0.2808,
+        "n": 14,
+        "min": 0.0851,
+        "max": 0.4422
+      },
+      "rejected_all_conf": {
+        "bins": [
+          "0.00-0.10",
+          "0.10-0.20",
+          "0.20-0.30",
+          "0.30-0.40",
+          "0.40-0.50",
+          "0.50-0.60",
+          "0.60-0.70",
+          "0.70-0.80",
+          "0.80-0.90",
+          "0.90-1.00"
+        ],
+        "counts": [
+          2,
+          4,
+          3,
+          5,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0.2429,
+        "median": 0.2057,
+        "n": 15,
+        "min": 0,
+        "max": 0.4422
+      },
+      "accepted_margins": {
+        "bins": [],
+        "counts": [],
+        "mean": 0,
+        "n": 0
+      },
+      "rejected_margins": {
+        "bins": [
+          "0.00-0.05",
+          "0.05-0.10",
+          "0.10-0.15",
+          "0.15-0.20",
+          "0.20-0.25",
+          "0.25-0.30",
+          "0.30-0.35",
+          "0.35-0.40",
+          "0.40-0.45",
+          "0.45-0.50"
+        ],
+        "counts": [
+          7,
+          2,
+          3,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0.0705,
+        "median": 0.0531,
+        "n": 14,
+        "min": 0.0019,
+        "max": 0.1957
+      }
+    },
+    "sweep_geo_dropout_0.3": {
+      "accepted_conf": {
+        "bins": [
+          "0.00-0.10",
+          "0.10-0.20",
+          "0.20-0.30",
+          "0.30-0.40",
+          "0.40-0.50",
+          "0.50-0.60",
+          "0.60-0.70",
+          "0.70-0.80",
+          "0.80-0.90",
+          "0.90-1.00"
+        ],
+        "counts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          1,
+          0
+        ],
+        "mean": 0.6808,
+        "median": 0.8195,
+        "n": 2,
+        "min": 0.5421,
+        "max": 0.8195
+      },
+      "rejected_calib_conf": {
+        "bins": [
+          "0.00-0.10",
+          "0.10-0.20",
+          "0.20-0.30",
+          "0.30-0.40",
+          "0.40-0.50",
+          "0.50-0.60",
+          "0.60-0.70",
+          "0.70-0.80",
+          "0.80-0.90",
+          "0.90-1.00"
+        ],
+        "counts": [
+          1,
+          2,
+          8,
+          2,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0.2679,
+        "median": 0.2579,
+        "n": 15,
+        "min": 0.081,
+        "max": 0.5064
+      },
+      "rejected_all_conf": {
+        "bins": [
+          "0.00-0.10",
+          "0.10-0.20",
+          "0.20-0.30",
+          "0.30-0.40",
+          "0.40-0.50",
+          "0.50-0.60",
+          "0.60-0.70",
+          "0.70-0.80",
+          "0.80-0.90",
+          "0.90-1.00"
+        ],
+        "counts": [
+          3,
+          2,
+          8,
+          2,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0.2364,
+        "median": 0.2369,
+        "n": 17,
+        "min": 0,
+        "max": 0.5064
+      },
+      "accepted_margins": {
+        "bins": [],
+        "counts": [],
+        "mean": 0,
+        "n": 0
+      },
+      "rejected_margins": {
+        "bins": [
+          "0.00-0.05",
+          "0.05-0.10",
+          "0.10-0.15",
+          "0.15-0.20",
+          "0.20-0.25",
+          "0.25-0.30",
+          "0.30-0.35",
+          "0.35-0.40",
+          "0.40-0.45",
+          "0.45-0.50"
+        ],
+        "counts": [
+          7,
+          3,
+          2,
+          1,
+          0,
+          0,
+          1,
+          1,
+          0,
+          0
+        ],
+        "mean": 0.0967,
+        "median": 0.055,
+        "n": 15,
+        "min": 0.0121,
+        "max": 0.3517
+      }
+    },
+    "sweep_geo_dropout_0.4": {
+      "accepted_conf": {
+        "bins": [
+          "0.00-0.10",
+          "0.10-0.20",
+          "0.20-0.30",
+          "0.30-0.40",
+          "0.40-0.50",
+          "0.50-0.60",
+          "0.60-0.70",
+          "0.70-0.80",
+          "0.80-0.90",
+          "0.90-1.00"
+        ],
+        "counts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          1,
+          0
+        ],
+        "mean": 0.6938,
+        "median": 0.8082,
+        "n": 2,
+        "min": 0.5793,
+        "max": 0.8082
+      },
+      "rejected_calib_conf": {
+        "bins": [
+          "0.00-0.10",
+          "0.10-0.20",
+          "0.20-0.30",
+          "0.30-0.40",
+          "0.40-0.50",
+          "0.50-0.60",
+          "0.60-0.70",
+          "0.70-0.80",
+          "0.80-0.90",
+          "0.90-1.00"
+        ],
+        "counts": [
+          1,
+          4,
+          5,
+          5,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0.2405,
+        "median": 0.2527,
+        "n": 15,
+        "min": 0.097,
+        "max": 0.357
+      },
+      "rejected_all_conf": {
+        "bins": [
+          "0.00-0.10",
+          "0.10-0.20",
+          "0.20-0.30",
+          "0.30-0.40",
+          "0.40-0.50",
+          "0.50-0.60",
+          "0.60-0.70",
+          "0.70-0.80",
+          "0.80-0.90",
+          "0.90-1.00"
+        ],
+        "counts": [
+          3,
+          4,
+          5,
+          5,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0.2122,
+        "median": 0.2473,
+        "n": 17,
+        "min": 0,
+        "max": 0.357
+      },
+      "accepted_margins": {
+        "bins": [],
+        "counts": [],
+        "mean": 0,
+        "n": 0
+      },
+      "rejected_margins": {
+        "bins": [
+          "0.00-0.05",
+          "0.05-0.10",
+          "0.10-0.15",
+          "0.15-0.20",
+          "0.20-0.25",
+          "0.25-0.30",
+          "0.30-0.35",
+          "0.35-0.40",
+          "0.40-0.45",
+          "0.45-0.50"
+        ],
+        "counts": [
+          4,
+          1,
+          4,
+          4,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mean": 0.1195,
+        "median": 0.1459,
+        "n": 15,
+        "min": 0.0021,
+        "max": 0.2521
+      }
+    }
+  },
+  "failure_analysis": {
+    "V0": {
+      "total_failures": 15,
+      "category_counts": {
+        "B": 2,
+        "D": 13
+      },
+      "category_labels": {
+        "A": "Geometry underuse (semantic won over geometry-heavy)",
+        "B": "Overconservative calibration (close to threshold)",
+        "C": "Weak semantic evidence (very low confidence)",
+        "D": "Hallucination suppression success (correct rejections)"
+      },
+      "failures": [
+        {
+          "category": "B",
+          "label": "Overconservative calibration",
+          "detail": "dog->looking at->person conf=0.28 < threshold=0.38 (close call)",
+          "image": "dog.jpg",
+          "subject": "dog",
+          "predicate": "looking at",
+          "object": "person",
+          "score": 0.2773,
+          "threshold": 0.38
+        },
+        {
+          "category": "B",
+          "label": "Overconservative calibration",
+          "detail": "person->looking at->potted plant conf=0.35 < threshold=0.38 (close call)",
+          "image": "sitting.jpg",
+          "subject": "person",
+          "predicate": "looking at",
+          "object": "potted plant",
+          "score": 0.3537,
+          "threshold": 0.38
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "bicycle->under->backpack correctly rejected (inanimate pair)",
+          "image": "bicycle.jpg",
+          "subject": "bicycle",
+          "predicate": "under",
+          "object": "backpack"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "cup->under->laptop correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "cup",
+          "predicate": "under",
+          "object": "laptop"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "cup->under->book correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "cup",
+          "predicate": "under",
+          "object": "book"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "laptop->in->cup correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "laptop",
+          "predicate": "in",
+          "object": "cup"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "laptop->on->book correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "laptop",
+          "predicate": "on",
+          "object": "book"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "book->in->cup correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "book",
+          "predicate": "in",
+          "object": "cup"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "book->under->laptop correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "book",
+          "predicate": "under",
+          "object": "laptop"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "potted plant->near->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "potted plant",
+          "predicate": "near",
+          "object": "chair"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "potted plant->behind->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "potted plant",
+          "predicate": "behind",
+          "object": "chair"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->on->potted plant correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "on",
+          "object": "potted plant"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->behind->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "behind",
+          "object": "chair"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->near->potted plant correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "near",
+          "object": "potted plant"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->near->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "near",
+          "object": "chair"
+        }
+      ],
+      "per_image_failure_counts": {
+        "dog.jpg": 1,
+        "sitting.jpg": 7,
+        "bicycle.jpg": 1,
+        "multiobject.jpg": 6
+      },
+      "images_with_failures": [
+        "dog.jpg",
+        "sitting.jpg",
+        "bicycle.jpg",
+        "multiobject.jpg"
+      ]
+    },
+    "V2": {
+      "total_failures": 13,
+      "category_counts": {
+        "D": 13
+      },
+      "category_labels": {
+        "A": "Geometry underuse (semantic won over geometry-heavy)",
+        "B": "Overconservative calibration (close to threshold)",
+        "C": "Weak semantic evidence (very low confidence)",
+        "D": "Hallucination suppression success (correct rejections)"
+      },
+      "failures": [
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "bicycle->on->backpack correctly rejected (inanimate pair)",
+          "image": "bicycle.jpg",
+          "subject": "bicycle",
+          "predicate": "on",
+          "object": "backpack"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "cup->near->laptop correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "cup",
+          "predicate": "near",
+          "object": "laptop"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "cup->near->book correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "cup",
+          "predicate": "near",
+          "object": "book"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "laptop->on->cup correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "laptop",
+          "predicate": "on",
+          "object": "cup"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "laptop->on->book correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "laptop",
+          "predicate": "on",
+          "object": "book"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "book->near->cup correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "book",
+          "predicate": "near",
+          "object": "cup"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "book->on->laptop correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "book",
+          "predicate": "on",
+          "object": "laptop"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "potted plant->near->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "potted plant",
+          "predicate": "near",
+          "object": "chair"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "potted plant->near->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "potted plant",
+          "predicate": "near",
+          "object": "chair"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->near->potted plant correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "near",
+          "object": "potted plant"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->near->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "near",
+          "object": "chair"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->near->potted plant correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "near",
+          "object": "potted plant"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->on->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "on",
+          "object": "chair"
+        }
+      ],
+      "per_image_failure_counts": {
+        "bicycle.jpg": 1,
+        "multiobject.jpg": 6,
+        "sitting.jpg": 6
+      },
+      "images_with_failures": [
+        "bicycle.jpg",
+        "multiobject.jpg",
+        "sitting.jpg"
+      ]
+    },
+    "sweep_geo_dropout_0.0": {
+      "total_failures": 13,
+      "category_counts": {
+        "D": 13
+      },
+      "category_labels": {
+        "A": "Geometry underuse (semantic won over geometry-heavy)",
+        "B": "Overconservative calibration (close to threshold)",
+        "C": "Weak semantic evidence (very low confidence)",
+        "D": "Hallucination suppression success (correct rejections)"
+      },
+      "failures": [
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "bicycle->near->backpack correctly rejected (inanimate pair)",
+          "image": "bicycle.jpg",
+          "subject": "bicycle",
+          "predicate": "near",
+          "object": "backpack"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "cup->near->laptop correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "cup",
+          "predicate": "near",
+          "object": "laptop"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "cup->near->book correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "cup",
+          "predicate": "near",
+          "object": "book"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "laptop->near->cup correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "laptop",
+          "predicate": "near",
+          "object": "cup"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "laptop->near->book correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "laptop",
+          "predicate": "near",
+          "object": "book"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "book->behind->cup correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "book",
+          "predicate": "behind",
+          "object": "cup"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "book->on->laptop correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "book",
+          "predicate": "on",
+          "object": "laptop"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "potted plant->in->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "potted plant",
+          "predicate": "in",
+          "object": "chair"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "potted plant->on->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "potted plant",
+          "predicate": "on",
+          "object": "chair"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->near->potted plant correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "near",
+          "object": "potted plant"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->on->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "on",
+          "object": "chair"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->near->potted plant correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "near",
+          "object": "potted plant"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->on->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "on",
+          "object": "chair"
+        }
+      ],
+      "per_image_failure_counts": {
+        "bicycle.jpg": 1,
+        "multiobject.jpg": 6,
+        "sitting.jpg": 6
+      },
+      "images_with_failures": [
+        "bicycle.jpg",
+        "multiobject.jpg",
+        "sitting.jpg"
+      ]
+    },
+    "sweep_geo_dropout_0.1": {
+      "total_failures": 12,
+      "category_counts": {
+        "D": 12
+      },
+      "category_labels": {
+        "A": "Geometry underuse (semantic won over geometry-heavy)",
+        "B": "Overconservative calibration (close to threshold)",
+        "C": "Weak semantic evidence (very low confidence)",
+        "D": "Hallucination suppression success (correct rejections)"
+      },
+      "failures": [
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "bicycle->under->backpack correctly rejected (inanimate pair)",
+          "image": "bicycle.jpg",
+          "subject": "bicycle",
+          "predicate": "under",
+          "object": "backpack"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "cup->on->laptop correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "cup",
+          "predicate": "on",
+          "object": "laptop"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "cup->on->book correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "cup",
+          "predicate": "on",
+          "object": "book"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "laptop->on->cup correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "laptop",
+          "predicate": "on",
+          "object": "cup"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "book->inside->cup correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "book",
+          "predicate": "inside",
+          "object": "cup"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "book->on->laptop correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "book",
+          "predicate": "on",
+          "object": "laptop"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "potted plant->near->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "potted plant",
+          "predicate": "near",
+          "object": "chair"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->near->potted plant correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "near",
+          "object": "potted plant"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->near->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "near",
+          "object": "chair"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->near->potted plant correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "near",
+          "object": "potted plant"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->near->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "near",
+          "object": "chair"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression (semantic filter)",
+          "detail": "backpack->on->person reason: ",
+          "image": "bicycle.jpg",
+          "subject": "backpack",
+          "predicate": "on",
+          "object": "person"
+        }
+      ],
+      "per_image_failure_counts": {
+        "bicycle.jpg": 2,
+        "multiobject.jpg": 5,
+        "sitting.jpg": 5
+      },
+      "images_with_failures": [
+        "bicycle.jpg",
+        "multiobject.jpg",
+        "sitting.jpg"
+      ]
+    },
+    "sweep_geo_dropout_0.2": {
+      "total_failures": 14,
+      "category_counts": {
+        "B": 1,
+        "D": 13
+      },
+      "category_labels": {
+        "A": "Geometry underuse (semantic won over geometry-heavy)",
+        "B": "Overconservative calibration (close to threshold)",
+        "C": "Weak semantic evidence (very low confidence)",
+        "D": "Hallucination suppression success (correct rejections)"
+      },
+      "failures": [
+        {
+          "category": "B",
+          "label": "Overconservative calibration (margin)",
+          "detail": "laptop->in->cup margin=0.07 < threshold (close call, conf=0.44)",
+          "image": "multiobject.jpg",
+          "subject": "laptop",
+          "predicate": "in",
+          "object": "cup",
+          "score": 0.4422,
+          "margin": 0.0737
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "bicycle->behind->backpack correctly rejected (inanimate pair)",
+          "image": "bicycle.jpg",
+          "subject": "bicycle",
+          "predicate": "behind",
+          "object": "backpack"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "cup->near->laptop correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "cup",
+          "predicate": "near",
+          "object": "laptop"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "cup->under->book correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "cup",
+          "predicate": "under",
+          "object": "book"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "laptop->in->cup correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "laptop",
+          "predicate": "in",
+          "object": "cup"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "laptop->behind->book correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "laptop",
+          "predicate": "behind",
+          "object": "book"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "book->in->cup correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "book",
+          "predicate": "in",
+          "object": "cup"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "book->attached to->laptop correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "book",
+          "predicate": "attached to",
+          "object": "laptop"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "potted plant->near->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "potted plant",
+          "predicate": "near",
+          "object": "chair"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "potted plant->near->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "potted plant",
+          "predicate": "near",
+          "object": "chair"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->behind->potted plant correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "behind",
+          "object": "potted plant"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->on->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "on",
+          "object": "chair"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->near->potted plant correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "near",
+          "object": "potted plant"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression (semantic filter)",
+          "detail": "backpack->on->person reason: ",
+          "image": "bicycle.jpg",
+          "subject": "backpack",
+          "predicate": "on",
+          "object": "person"
+        }
+      ],
+      "per_image_failure_counts": {
+        "multiobject.jpg": 7,
+        "bicycle.jpg": 2,
+        "sitting.jpg": 5
+      },
+      "images_with_failures": [
+        "multiobject.jpg",
+        "bicycle.jpg",
+        "sitting.jpg"
+      ]
+    },
+    "sweep_geo_dropout_0.3": {
+      "total_failures": 12,
+      "category_counts": {
+        "D": 12
+      },
+      "category_labels": {
+        "A": "Geometry underuse (semantic won over geometry-heavy)",
+        "B": "Overconservative calibration (close to threshold)",
+        "C": "Weak semantic evidence (very low confidence)",
+        "D": "Hallucination suppression success (correct rejections)"
+      },
+      "failures": [
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "bicycle->in front of->backpack correctly rejected (inanimate pair)",
+          "image": "bicycle.jpg",
+          "subject": "bicycle",
+          "predicate": "in front of",
+          "object": "backpack"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "cup->under->laptop correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "cup",
+          "predicate": "under",
+          "object": "laptop"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "laptop->on->cup correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "laptop",
+          "predicate": "on",
+          "object": "cup"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "laptop->on->book correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "laptop",
+          "predicate": "on",
+          "object": "book"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "book->on->laptop correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "book",
+          "predicate": "on",
+          "object": "laptop"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "potted plant->in->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "potted plant",
+          "predicate": "in",
+          "object": "chair"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->under->potted plant correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "under",
+          "object": "potted plant"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->on->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "on",
+          "object": "chair"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->near->potted plant correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "near",
+          "object": "potted plant"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->on->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "on",
+          "object": "chair"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression (semantic filter)",
+          "detail": "backpack->on->person reason: ",
+          "image": "bicycle.jpg",
+          "subject": "backpack",
+          "predicate": "on",
+          "object": "person"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression (semantic filter)",
+          "detail": "person->holding->dog reason: ",
+          "image": "dog.jpg",
+          "subject": "person",
+          "predicate": "holding",
+          "object": "dog"
+        }
+      ],
+      "per_image_failure_counts": {
+        "bicycle.jpg": 2,
+        "multiobject.jpg": 4,
+        "sitting.jpg": 5,
+        "dog.jpg": 1
+      },
+      "images_with_failures": [
+        "bicycle.jpg",
+        "multiobject.jpg",
+        "sitting.jpg",
+        "dog.jpg"
+      ]
+    },
+    "sweep_geo_dropout_0.4": {
+      "total_failures": 14,
+      "category_counts": {
+        "D": 14
+      },
+      "category_labels": {
+        "A": "Geometry underuse (semantic won over geometry-heavy)",
+        "B": "Overconservative calibration (close to threshold)",
+        "C": "Weak semantic evidence (very low confidence)",
+        "D": "Hallucination suppression success (correct rejections)"
+      },
+      "failures": [
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "bicycle->under->backpack correctly rejected (inanimate pair)",
+          "image": "bicycle.jpg",
+          "subject": "bicycle",
+          "predicate": "under",
+          "object": "backpack"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "cup->behind->laptop correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "cup",
+          "predicate": "behind",
+          "object": "laptop"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "cup->under->book correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "cup",
+          "predicate": "under",
+          "object": "book"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "laptop->on->cup correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "laptop",
+          "predicate": "on",
+          "object": "cup"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "laptop->on->book correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "laptop",
+          "predicate": "on",
+          "object": "book"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "book->under->cup correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "book",
+          "predicate": "under",
+          "object": "cup"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "book->on->laptop correctly rejected (inanimate pair)",
+          "image": "multiobject.jpg",
+          "subject": "book",
+          "predicate": "on",
+          "object": "laptop"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "potted plant->in->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "potted plant",
+          "predicate": "in",
+          "object": "chair"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->under->potted plant correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "under",
+          "object": "potted plant"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->in->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "in",
+          "object": "chair"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->near->potted plant correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "near",
+          "object": "potted plant"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression success",
+          "detail": "chair->in->chair correctly rejected (inanimate pair)",
+          "image": "sitting.jpg",
+          "subject": "chair",
+          "predicate": "in",
+          "object": "chair"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression (semantic filter)",
+          "detail": "backpack->on->person reason: ",
+          "image": "bicycle.jpg",
+          "subject": "backpack",
+          "predicate": "on",
+          "object": "person"
+        },
+        {
+          "category": "D",
+          "label": "Hallucination suppression (semantic filter)",
+          "detail": "person->holding->dog reason: ",
+          "image": "dog.jpg",
+          "subject": "person",
+          "predicate": "holding",
+          "object": "dog"
+        }
+      ],
+      "per_image_failure_counts": {
+        "bicycle.jpg": 2,
+        "multiobject.jpg": 6,
+        "sitting.jpg": 5,
+        "dog.jpg": 1
+      },
+      "images_with_failures": [
+        "bicycle.jpg",
+        "multiobject.jpg",
+        "sitting.jpg",
+        "dog.jpg"
+      ]
+    }
+  },
+  "feature_utilization": {
+    "V0": {
+      "avg_norms": {
+        "subj_label": 4.1169,
+        "obj_label": 5.4357,
+        "geo": 2.5529,
+        "subj_clip": 8.6753,
+        "obj_clip": 8.2609,
+        "union_clip": 8.6185,
+        "pose": 1.6546
+      },
+      "percentages": {
+        "subj_clip": 22.1,
+        "union_clip": 21.9,
+        "obj_clip": 21.0,
+        "obj_label": 13.8,
+        "subj_label": 10.5,
+        "geo": 6.5,
+        "pose": 4.2
+      }
+    },
+    "V2": {
+      "avg_norms": {
+        "subj_label": 4.2399,
+        "obj_label": 4.5204,
+        "geo": 1.3633,
+        "subj_clip": 6.1052,
+        "obj_clip": 5.1857,
+        "union_clip": 5.9791,
+        "pose": 1.0068,
+        "pose_object": 1.1493
+      },
+      "percentages": {
+        "subj_clip": 20.7,
+        "union_clip": 20.2,
+        "obj_clip": 17.5,
+        "obj_label": 15.3,
+        "subj_label": 14.3,
+        "geo": 4.6,
+        "pose_object": 3.9,
+        "pose": 3.4
+      }
+    },
+    "sweep_geo_dropout_0.0": {
+      "avg_norms": {
+        "subj_label": 2.9528,
+        "obj_label": 3.6693,
+        "geo": 0.8644,
+        "subj_clip": 4.2501,
+        "obj_clip": 3.4107,
+        "union_clip": 3.8389,
+        "pose": 0.7651,
+        "pose_object": 0.7621
+      },
+      "percentages": {
+        "subj_clip": 20.7,
+        "union_clip": 18.7,
+        "obj_label": 17.9,
+        "obj_clip": 16.6,
+        "subj_label": 14.4,
+        "geo": 4.2,
+        "pose": 3.7,
+        "pose_object": 3.7
+      }
+    },
+    "sweep_geo_dropout_0.1": {
+      "avg_norms": {
+        "subj_label": 3.6071,
+        "obj_label": 4.4765,
+        "geo": 1.2115,
+        "subj_clip": 5.6549,
+        "obj_clip": 4.6414,
+        "union_clip": 5.0117,
+        "pose": 1.0188,
+        "pose_object": 1.2278
+      },
+      "percentages": {
+        "subj_clip": 21.1,
+        "union_clip": 18.7,
+        "obj_clip": 17.3,
+        "obj_label": 16.7,
+        "subj_label": 13.4,
+        "pose_object": 4.6,
+        "geo": 4.5,
+        "pose": 3.8
+      }
+    },
+    "sweep_geo_dropout_0.2": {
+      "avg_norms": {
+        "subj_label": 3.1043,
+        "obj_label": 3.1259,
+        "geo": 0.8826,
+        "subj_clip": 3.2444,
+        "obj_clip": 3.0937,
+        "union_clip": 3.1584,
+        "pose": 0.61,
+        "pose_object": 0.3618
+      },
+      "percentages": {
+        "subj_clip": 18.5,
+        "union_clip": 18.0,
+        "obj_label": 17.8,
+        "subj_label": 17.7,
+        "obj_clip": 17.6,
+        "geo": 5.0,
+        "pose": 3.5,
+        "pose_object": 2.1
+      }
+    },
+    "sweep_geo_dropout_0.3": {
+      "avg_norms": {
+        "subj_label": 2.5356,
+        "obj_label": 3.5109,
+        "geo": 0.6175,
+        "subj_clip": 3.2244,
+        "obj_clip": 3.0304,
+        "union_clip": 3.2504,
+        "pose": 0.7523,
+        "pose_object": 0.7363
+      },
+      "percentages": {
+        "obj_label": 19.9,
+        "union_clip": 18.4,
+        "subj_clip": 18.3,
+        "obj_clip": 17.2,
+        "subj_label": 14.4,
+        "pose": 4.3,
+        "pose_object": 4.2,
+        "geo": 3.5
+      }
+    },
+    "sweep_geo_dropout_0.4": {
+      "avg_norms": {
+        "subj_label": 2.5513,
+        "obj_label": 3.5045,
+        "geo": 0.5838,
+        "subj_clip": 3.2247,
+        "obj_clip": 3.0304,
+        "union_clip": 3.249,
+        "pose": 0.7634,
+        "pose_object": 0.7418
+      },
+      "percentages": {
+        "obj_label": 19.9,
+        "union_clip": 18.4,
+        "subj_clip": 18.3,
+        "obj_clip": 17.2,
+        "subj_label": 14.5,
+        "pose": 4.3,
+        "pose_object": 4.2,
+        "geo": 3.3
+      }
+    }
+  },
+  "calibration_analysis": {
+    "V0": {
+      "rejection_reasons": {
+        "confidence_below_threshold": 18
+      },
+      "conf_shortfall_mean": 0.1585,
+      "conf_shortfall_min": 0.0263,
+      "conf_shortfall_max": 0.2604,
+      "margin_shortfall_mean": 0.1242,
+      "rejected_by_conf": 18,
+      "rejected_by_margin": 0,
+      "per_family": {
+        "attentional": {
+          "accepted": 0,
+          "rejected": 2,
+          "total": 2,
+          "accept_rate": 0.0,
+          "conf_mean": 0.3155,
+          "margin_mean": 0.0217,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "neutral_spatial": {
+          "accepted": 0,
+          "rejected": 4,
+          "total": 4,
+          "accept_rate": 0.0,
+          "conf_mean": 0.2272,
+          "margin_mean": 0.0756,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "strong_semantic": {
+          "accepted": 3,
+          "rejected": 0,
+          "total": 3,
+          "accept_rate": 1.0,
+          "conf_mean": 0.5458,
+          "margin_mean": 0.0,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "unknown": {
+          "accepted": 0,
+          "rejected": 0,
+          "total": 0,
+          "accept_rate": 0.0,
+          "conf_mean": 0,
+          "margin_mean": 0,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "weak_spatial": {
+          "accepted": 0,
+          "rejected": 12,
+          "total": 12,
+          "accept_rate": 0.0,
+          "conf_mean": 0.2039,
+          "margin_mean": 0.092,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        }
+      },
+      "recovered_by_adaptive": 0
+    },
+    "V2": {
+      "rejection_reasons": {
+        "confidence_below_threshold": 17
+      },
+      "conf_shortfall_mean": 0.194,
+      "conf_shortfall_min": 0.1292,
+      "conf_shortfall_max": 0.3206,
+      "margin_shortfall_mean": 0.1131,
+      "rejected_by_conf": 17,
+      "rejected_by_margin": 0,
+      "per_family": {
+        "attentional": {
+          "accepted": 0,
+          "rejected": 0,
+          "total": 0,
+          "accept_rate": 0.0,
+          "conf_mean": 0,
+          "margin_mean": 0,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "neutral_spatial": {
+          "accepted": 0,
+          "rejected": 5,
+          "total": 5,
+          "accept_rate": 0.0,
+          "conf_mean": 0.2075,
+          "margin_mean": 0.0264,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "strong_semantic": {
+          "accepted": 3,
+          "rejected": 1,
+          "total": 4,
+          "accept_rate": 0.75,
+          "conf_mean": 0.5128,
+          "margin_mean": 0.0103,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "unknown": {
+          "accepted": 0,
+          "rejected": 0,
+          "total": 0,
+          "accept_rate": 0.0,
+          "conf_mean": 0,
+          "margin_mean": 0,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "weak_spatial": {
+          "accepted": 0,
+          "rejected": 11,
+          "total": 11,
+          "accept_rate": 0.0,
+          "conf_mean": 0.1717,
+          "margin_mean": 0.0749,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        }
+      },
+      "recovered_by_adaptive": 0
+    },
+    "sweep_geo_dropout_0.0": {
+      "rejection_reasons": {
+        "confidence_below_threshold": 16
+      },
+      "conf_shortfall_mean": 0.2025,
+      "conf_shortfall_min": 0.1259,
+      "conf_shortfall_max": 0.2544,
+      "margin_shortfall_mean": 0.1309,
+      "rejected_by_conf": 16,
+      "rejected_by_margin": 0,
+      "per_family": {
+        "attentional": {
+          "accepted": 0,
+          "rejected": 2,
+          "total": 2,
+          "accept_rate": 0.0,
+          "conf_mean": 0.226,
+          "margin_mean": 0.0318,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "neutral_spatial": {
+          "accepted": 0,
+          "rejected": 5,
+          "total": 5,
+          "accept_rate": 0.0,
+          "conf_mean": 0.1784,
+          "margin_mean": 0.0343,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "strong_semantic": {
+          "accepted": 2,
+          "rejected": 1,
+          "total": 3,
+          "accept_rate": 0.6667,
+          "conf_mean": 0.4733,
+          "margin_mean": 0.0053,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "unknown": {
+          "accepted": 0,
+          "rejected": 0,
+          "total": 0,
+          "accept_rate": 0.0,
+          "conf_mean": 0,
+          "margin_mean": 0,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "weak_spatial": {
+          "accepted": 0,
+          "rejected": 8,
+          "total": 8,
+          "accept_rate": 0.0,
+          "conf_mean": 0.1648,
+          "margin_mean": 0.0182,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        }
+      },
+      "recovered_by_adaptive": 0
+    },
+    "sweep_geo_dropout_0.1": {
+      "rejection_reasons": {
+        "confidence_below_threshold": 16
+      },
+      "conf_shortfall_mean": 0.1703,
+      "conf_shortfall_min": 0.0294,
+      "conf_shortfall_max": 0.3131,
+      "margin_shortfall_mean": 0.1285,
+      "rejected_by_conf": 16,
+      "rejected_by_margin": 0,
+      "per_family": {
+        "attentional": {
+          "accepted": 0,
+          "rejected": 0,
+          "total": 0,
+          "accept_rate": 0.0,
+          "conf_mean": 0,
+          "margin_mean": 0,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "neutral_spatial": {
+          "accepted": 0,
+          "rejected": 4,
+          "total": 4,
+          "accept_rate": 0.0,
+          "conf_mean": 0.315,
+          "margin_mean": 0.1777,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "strong_semantic": {
+          "accepted": 3,
+          "rejected": 1,
+          "total": 4,
+          "accept_rate": 0.75,
+          "conf_mean": 0.5057,
+          "margin_mean": 0.0022,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "unknown": {
+          "accepted": 0,
+          "rejected": 0,
+          "total": 0,
+          "accept_rate": 0.0,
+          "conf_mean": 0,
+          "margin_mean": 0,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "weak_spatial": {
+          "accepted": 0,
+          "rejected": 11,
+          "total": 11,
+          "accept_rate": 0.0,
+          "conf_mean": 0.17,
+          "margin_mean": 0.0983,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        }
+      },
+      "recovered_by_adaptive": 0
+    },
+    "sweep_geo_dropout_0.2": {
+      "rejection_reasons": {
+        "confidence_below_threshold": 14
+      },
+      "conf_shortfall_mean": 0.1456,
+      "conf_shortfall_min": 0.0023,
+      "conf_shortfall_max": 0.2949,
+      "margin_shortfall_mean": 0.1124,
+      "rejected_by_conf": 14,
+      "rejected_by_margin": 0,
+      "per_family": {
+        "attentional": {
+          "accepted": 0,
+          "rejected": 0,
+          "total": 0,
+          "accept_rate": 0.0,
+          "conf_mean": 0,
+          "margin_mean": 0,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "neutral_spatial": {
+          "accepted": 0,
+          "rejected": 3,
+          "total": 3,
+          "accept_rate": 0.0,
+          "conf_mean": 0.379,
+          "margin_mean": 0.0305,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "strong_semantic": {
+          "accepted": 3,
+          "rejected": 0,
+          "total": 3,
+          "accept_rate": 1.0,
+          "conf_mean": 0.7079,
+          "margin_mean": 0.0,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "unknown": {
+          "accepted": 0,
+          "rejected": 0,
+          "total": 0,
+          "accept_rate": 0.0,
+          "conf_mean": 0,
+          "margin_mean": 0,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "weak_spatial": {
+          "accepted": 0,
+          "rejected": 11,
+          "total": 11,
+          "accept_rate": 0.0,
+          "conf_mean": 0.2279,
+          "margin_mean": 0.0814,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        }
+      },
+      "recovered_by_adaptive": 0
+    },
+    "sweep_geo_dropout_0.3": {
+      "rejection_reasons": {
+        "confidence_below_threshold": 15
+      },
+      "conf_shortfall_mean": 0.1441,
+      "conf_shortfall_min": 0.0057,
+      "conf_shortfall_max": 0.299,
+      "margin_shortfall_mean": 0.0803,
+      "rejected_by_conf": 15,
+      "rejected_by_margin": 0,
+      "per_family": {
+        "attentional": {
+          "accepted": 0,
+          "rejected": 1,
+          "total": 1,
+          "accept_rate": 0.0,
+          "conf_mean": 0.2082,
+          "margin_mean": 0.055,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "neutral_spatial": {
+          "accepted": 0,
+          "rejected": 7,
+          "total": 7,
+          "accept_rate": 0.0,
+          "conf_mean": 0.2751,
+          "margin_mean": 0.1383,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "strong_semantic": {
+          "accepted": 2,
+          "rejected": 2,
+          "total": 4,
+          "accept_rate": 0.5,
+          "conf_mean": 0.5783,
+          "margin_mean": 0.013,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "unknown": {
+          "accepted": 0,
+          "rejected": 0,
+          "total": 0,
+          "accept_rate": 0.0,
+          "conf_mean": 0,
+          "margin_mean": 0,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "weak_spatial": {
+          "accepted": 0,
+          "rejected": 5,
+          "total": 5,
+          "accept_rate": 0.0,
+          "conf_mean": 0.1865,
+          "margin_mean": 0.075,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        }
+      },
+      "recovered_by_adaptive": 0
+    },
+    "sweep_geo_dropout_0.4": {
+      "rejection_reasons": {
+        "confidence_below_threshold": 15
+      },
+      "conf_shortfall_mean": 0.1395,
+      "conf_shortfall_min": 0.023,
+      "conf_shortfall_max": 0.283,
+      "margin_shortfall_mean": 0.0865,
+      "rejected_by_conf": 15,
+      "rejected_by_margin": 0,
+      "per_family": {
+        "attentional": {
+          "accepted": 0,
+          "rejected": 1,
+          "total": 1,
+          "accept_rate": 0.0,
+          "conf_mean": 0.2108,
+          "margin_mean": 0.0495,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "neutral_spatial": {
+          "accepted": 0,
+          "rejected": 7,
+          "total": 7,
+          "accept_rate": 0.0,
+          "conf_mean": 0.2533,
+          "margin_mean": 0.1294,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "strong_semantic": {
+          "accepted": 2,
+          "rejected": 0,
+          "total": 2,
+          "accept_rate": 1.0,
+          "conf_mean": 0.6938,
+          "margin_mean": 0.0,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "unknown": {
+          "accepted": 0,
+          "rejected": 0,
+          "total": 0,
+          "accept_rate": 0.0,
+          "conf_mean": 0,
+          "margin_mean": 0,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        },
+        "weak_spatial": {
+          "accepted": 0,
+          "rejected": 7,
+          "total": 7,
+          "accept_rate": 0.0,
+          "conf_mean": 0.232,
+          "margin_mean": 0.1196,
+          "effective_margin_mean": null,
+          "competitor_factor_mean": null
+        }
+      },
+      "recovered_by_adaptive": 0
+    }
+  },
+  "qualitative_comparison": [
+    {
+      "image": "ambiguous.jpg",
+      "detections": [],
+      "per_version": {
+        "V0": [],
+        "V2": [],
+        "sweep_geo_dropout_0.0": [],
+        "sweep_geo_dropout_0.1": [],
+        "sweep_geo_dropout_0.2": [],
+        "sweep_geo_dropout_0.3": [],
+        "sweep_geo_dropout_0.4": []
+      }
+    },
+    {
+      "image": "bicycle.jpg",
+      "detections": [
+        "person",
+        "bicycle",
+        "backpack"
+      ],
+      "per_version": {
+        "V0": [
+          {
+            "subject": "person",
+            "predicate": "riding",
+            "object": "bicycle",
+            "confidence": 0.37
+          }
+        ],
+        "V2": [
+          {
+            "subject": "person",
+            "predicate": "wearing",
+            "object": "backpack",
+            "confidence": 0.5476
+          }
+        ],
+        "sweep_geo_dropout_0.0": [
+          {
+            "subject": "person",
+            "predicate": "wearing",
+            "object": "backpack",
+            "confidence": 0.3888
+          }
+        ],
+        "sweep_geo_dropout_0.1": [
+          {
+            "subject": "person",
+            "predicate": "riding",
+            "object": "bicycle",
+            "confidence": 0.6071
+          }
+        ],
+        "sweep_geo_dropout_0.2": [
+          {
+            "subject": "person",
+            "predicate": "wearing",
+            "object": "backpack",
+            "confidence": 0.6769
+          }
+        ],
+        "sweep_geo_dropout_0.3": [
+          {
+            "subject": "person",
+            "predicate": "wearing",
+            "object": "backpack",
+            "confidence": 0.5995
+          }
+        ],
+        "sweep_geo_dropout_0.4": [
+          {
+            "subject": "person",
+            "predicate": "wearing",
+            "object": "backpack",
+            "confidence": 0.5882
+          }
+        ]
+      }
+    },
+    {
+      "image": "car.jpg",
+      "detections": [
+        "car"
+      ],
+      "per_version": {
+        "V0": [],
+        "V2": [],
+        "sweep_geo_dropout_0.0": [],
+        "sweep_geo_dropout_0.1": [],
+        "sweep_geo_dropout_0.2": [],
+        "sweep_geo_dropout_0.3": [],
+        "sweep_geo_dropout_0.4": []
+      }
+    },
+    {
+      "image": "carrying_box.jpg",
+      "detections": [],
+      "per_version": {
+        "V0": [],
+        "V2": [],
+        "sweep_geo_dropout_0.0": [],
+        "sweep_geo_dropout_0.1": [],
+        "sweep_geo_dropout_0.2": [],
+        "sweep_geo_dropout_0.3": [],
+        "sweep_geo_dropout_0.4": []
+      }
+    },
+    {
+      "image": "dog.jpg",
+      "detections": [
+        "person",
+        "dog"
+      ],
+      "per_version": {
+        "V0": [
+          {
+            "subject": "person",
+            "predicate": "carrying",
+            "object": "dog",
+            "confidence": 0.3295
+          }
+        ],
+        "V2": [
+          {
+            "subject": "person",
+            "predicate": "carrying",
+            "object": "dog",
+            "confidence": 0.3317
+          }
+        ],
+        "sweep_geo_dropout_0.0": [],
+        "sweep_geo_dropout_0.1": [
+          {
+            "subject": "person",
+            "predicate": "carrying",
+            "object": "dog",
+            "confidence": 0.2189
+          }
+        ],
+        "sweep_geo_dropout_0.2": [
+          {
+            "subject": "person",
+            "predicate": "carrying",
+            "object": "dog",
+            "confidence": 0.3661
+          }
+        ],
+        "sweep_geo_dropout_0.3": [],
+        "sweep_geo_dropout_0.4": []
+      }
+    },
+    {
+      "image": "dog_bone.jpg",
+      "detections": [],
+      "per_version": {
+        "V0": [],
+        "V2": [],
+        "sweep_geo_dropout_0.0": [],
+        "sweep_geo_dropout_0.1": [],
+        "sweep_geo_dropout_0.2": [],
+        "sweep_geo_dropout_0.3": [],
+        "sweep_geo_dropout_0.4": []
+      }
+    },
+    {
+      "image": "horse_riding.jpg",
+      "detections": [],
+      "per_version": {
+        "V0": [],
+        "V2": [],
+        "sweep_geo_dropout_0.0": [],
+        "sweep_geo_dropout_0.1": [],
+        "sweep_geo_dropout_0.2": [],
+        "sweep_geo_dropout_0.3": [],
+        "sweep_geo_dropout_0.4": []
+      }
+    },
+    {
+      "image": "looking_at.jpg",
+      "detections": [],
+      "per_version": {
+        "V0": [],
+        "V2": [],
+        "sweep_geo_dropout_0.0": [],
+        "sweep_geo_dropout_0.1": [],
+        "sweep_geo_dropout_0.2": [],
+        "sweep_geo_dropout_0.3": [],
+        "sweep_geo_dropout_0.4": []
+      }
+    },
+    {
+      "image": "multiobject.jpg",
+      "detections": [
+        "cup",
+        "laptop",
+        "book"
+      ],
+      "per_version": {
+        "V0": [],
+        "V2": [],
+        "sweep_geo_dropout_0.0": [],
+        "sweep_geo_dropout_0.1": [],
+        "sweep_geo_dropout_0.2": [],
+        "sweep_geo_dropout_0.3": [],
+        "sweep_geo_dropout_0.4": []
+      }
+    },
+    {
+      "image": "sitting.jpg",
+      "detections": [
+        "person",
+        "potted plant",
+        "chair",
+        "chair"
+      ],
+      "per_version": {
+        "V0": [
+          {
+            "subject": "person",
+            "predicate": "sitting on",
+            "object": "chair",
+            "confidence": 0.398
+          }
+        ],
+        "V2": [
+          {
+            "subject": "person",
+            "predicate": "sitting on",
+            "object": "chair",
+            "confidence": 0.3959
+          }
+        ],
+        "sweep_geo_dropout_0.0": [
+          {
+            "subject": "person",
+            "predicate": "sitting on",
+            "object": "chair",
+            "confidence": 0.3505
+          }
+        ],
+        "sweep_geo_dropout_0.1": [
+          {
+            "subject": "person",
+            "predicate": "sitting on",
+            "object": "chair",
+            "confidence": 0.4319
+          }
+        ],
+        "sweep_geo_dropout_0.2": [
+          {
+            "subject": "person",
+            "predicate": "sitting on",
+            "object": "chair",
+            "confidence": 0.5408
+          }
+        ],
+        "sweep_geo_dropout_0.3": [
+          {
+            "subject": "person",
+            "predicate": "sitting on",
+            "object": "chair",
+            "confidence": 0.3421
+          }
+        ],
+        "sweep_geo_dropout_0.4": [
+          {
+            "subject": "person",
+            "predicate": "sitting on",
+            "object": "chair",
+            "confidence": 0.3793
+          }
+        ]
+      }
+    },
+    {
+      "image": "sitting_couch.jpg",
+      "detections": [],
+      "per_version": {
+        "V0": [],
+        "V2": [],
+        "sweep_geo_dropout_0.0": [],
+        "sweep_geo_dropout_0.1": [],
+        "sweep_geo_dropout_0.2": [],
+        "sweep_geo_dropout_0.3": [],
+        "sweep_geo_dropout_0.4": []
+      }
+    },
+    {
+      "image": "wearing_hat.jpg",
+      "detections": [],
+      "per_version": {
+        "V0": [],
+        "V2": [],
+        "sweep_geo_dropout_0.0": [],
+        "sweep_geo_dropout_0.1": [],
+        "sweep_geo_dropout_0.2": [],
+        "sweep_geo_dropout_0.3": [],
+        "sweep_geo_dropout_0.4": []
+      }
+    }
+  ]
+}

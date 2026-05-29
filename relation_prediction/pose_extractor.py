@@ -21,6 +21,7 @@ from PIL import Image
 
 
 POSE_FEATURE_DIM = 20
+POSE_OBJECT_FEATURE_DIM = 7
 
 
 class PoseExtractor:
@@ -200,6 +201,130 @@ class PoseExtractor:
             arm_reach,
             body_center_rel[0], body_center_rel[1],
             float(np.clip(height_ratio, 0.0, 2.0)),
+        ], dtype=np.float32)
+
+        return torch.from_numpy(features)
+
+    @torch.no_grad()
+    def extract_pose_object_features(
+        self,
+        image: Image.Image,
+        person_box: Tuple[float, float, float, float],
+        obj_box: Tuple[float, float, float, float],
+    ) -> Optional[torch.Tensor]:
+        """Extract interaction-aware pose-object relative features.
+
+        Computes distances between body keypoints and object bounding box
+        to capture interaction semantics (sitting, riding, holding, etc.).
+
+        Features (7-dim):
+          0: wrist_to_obj_center    — min wrist-to-object-center distance
+          1: ankle_to_obj_center    — min ankle-to-object-center distance
+          2: hip_to_obj_bottom      — hip center to object bottom (sitting cue)
+          3: shoulder_to_obj_center — shoulder center to object center
+          4: knee_to_obj_center     — min knee-to-object-center distance
+          5: head_to_obj_center     — nose to object center (looking at cue)
+          6: limb_obj_overlap       — count of limb keypoints inside obj bbox
+
+        Args:
+            image: PIL Image (RGB)
+            person_box: (x1, y1, x2, y2) in pixel coordinates
+            obj_box: (x1, y1, x2, y2) in pixel coordinates
+
+        Returns:
+            Tensor (POSE_OBJECT_FEATURE_DIM,) or None if pose detection fails.
+        """
+        self._lazy_load()
+        if self._pose is False:
+            return None
+
+        x1, y1, x2, y2 = person_box
+        w, h = x2 - x1, y2 - y1
+        if w <= 0 or h <= 0:
+            return None
+        margin_x, margin_y = w * 0.2, h * 0.2
+        crop_box = (
+            max(0, x1 - margin_x), max(0, y1 - margin_y),
+            min(image.width, x2 + margin_x), min(image.height, y2 + margin_y),
+        )
+        person_crop = image.crop(crop_box)
+        if person_crop.width == 0 or person_crop.height == 0:
+            return None
+        results = self._pose.process(np.array(person_crop))
+        if not results or results.pose_landmarks is None:
+            return None
+
+        L = results.pose_landmarks.landmark
+
+        ox1, oy1, ox2, oy2 = obj_box
+        obj_center_x = (ox1 + ox2) / 2.0
+        obj_center_y = (oy1 + oy2) / 2.0
+        img_w, img_h = image.width, image.height
+        denom = max(img_w, img_h, 1.0)
+
+        # Normalize object box
+        obj_top = oy1 / max(img_h, 1.0)
+        obj_bottom = oy2 / max(img_h, 1.0)
+
+        def kp(idx):
+            # MediaPipe coordinates are already in [0,1] relative to image
+            # But the crop changes the coordinate space.
+            # We convert back to image coordinates.
+            return (
+                crop_box[0] + L[idx].x * (crop_box[2] - crop_box[0]),
+                crop_box[1] + L[idx].y * (crop_box[3] - crop_box[1]),
+            )
+
+        # Key landmarks
+        nose = kp(0)
+        lsho, rsho = kp(11), kp(12)
+        lelb, relb = kp(13), kp(14)
+        lwri, rwri = kp(15), kp(16)
+        lhip, rhip = kp(23), kp(24)
+        lkne, rkne = kp(25), kp(26)
+        lank, rank = kp(27), kp(28)
+
+        # Helper: distance between a keypoint and object center
+        def _dist(keypoint):
+            dx = (keypoint[0] - obj_center_x) / denom
+            dy = (keypoint[1] - obj_center_y) / denom
+            return float(np.sqrt(dx * dx + dy * dy))
+
+        # 1. Wrist-to-object-center (min of both wrists)
+        wrist_dist = min(_dist(lwri), _dist(rwri))
+
+        # 2. Ankle-to-object-center (min of both ankles)
+        ankle_dist = min(_dist(lank), _dist(rank))
+
+        # 3. Hip-to-object-bottom (vertical distance from hip center to obj bottom)
+        hip_center_y = (lhip[1] + rhip[1]) / 2.0
+        hip_to_obj_bottom = (hip_center_y - obj_bottom) / denom
+
+        # 4. Shoulder-to-object-center (min of both shoulders)
+        shoulder_dist = min(_dist(lsho), _dist(rsho))
+
+        # 5. Knee-to-object-center (min of both knees)
+        knee_dist = min(_dist(lkne), _dist(rkne))
+
+        # 6. Head-to-object-center (looking at)
+        head_dist = _dist(nose)
+
+        # 7. Limb-object overlap: count how many limb keypoints fall inside obj bbox
+        limb_kps = [lwri, rwri, lelb, relb, lkne, rkne, lank, rank]
+        overlap_count = 0
+        for kx, ky in limb_kps:
+            if ox1 <= kx <= ox2 and oy1 <= ky <= oy2:
+                overlap_count += 1
+        limb_overlap = overlap_count / max(len(limb_kps), 1)
+
+        features = np.array([
+            float(np.clip(wrist_dist, 0.0, 2.0)),
+            float(np.clip(ankle_dist, 0.0, 2.0)),
+            float(np.clip(hip_to_obj_bottom, -1.0, 1.0)),
+            float(np.clip(shoulder_dist, 0.0, 2.0)),
+            float(np.clip(knee_dist, 0.0, 2.0)),
+            float(np.clip(head_dist, 0.0, 2.0)),
+            float(np.clip(limb_overlap, 0.0, 1.0)),
         ], dtype=np.float32)
 
         return torch.from_numpy(features)

@@ -44,6 +44,7 @@ from relation_prediction.predict import (
     _model_union_dim,
     _model_type,
 )
+from utils.logger_utils import debug_print
 
 # ---------------------------------------------------------------------------
 # Colors
@@ -218,7 +219,7 @@ def save_visual_debug(
     cap_pil.save(cap_path)
     paths["caption"] = cap_path
 
-    print(f"[eval_debug] Phase 1: Saved 5 debug panels for {image_name}")
+    debug_print(f"[eval_debug] Phase 1: Saved 5 debug panels for {image_name}")
     return paths
 
 
@@ -296,7 +297,7 @@ def save_debug_composite(
 
     path = os.path.join(output_dir, f"{image_name}_debug_composite.png")
     pil.save(path)
-    print(f"[eval_debug] Saved debug composite: {path}")
+    debug_print(f"[eval_debug] Saved debug composite: {path}")
     return path
 
 
@@ -356,7 +357,7 @@ def run_baseline_comparison_debug(
         os.path.join(output_dir, f"{image_name}_side_by_side.png"),
     )
 
-    print(f"[eval_debug] Phase 2: Baseline comparison saved to {json_path}")
+    debug_print(f"[eval_debug] Phase 2: Baseline comparison saved to {json_path}")
     return comparison
 
 
@@ -670,7 +671,7 @@ def build_failure_report(
     with open(path, "w") as f:
         json.dump(report, f, indent=2)
 
-    print(f"[eval_debug] Phase 3: Failure report saved to {path}")
+    debug_print(f"[eval_debug] Phase 3: Failure report saved to {path}")
     return path
 
 
@@ -730,14 +731,14 @@ def generate_attention_visualization(
                 )
             except Exception as e:
                 model.set_attention_capture(False)
-                print(f"[attention] forward pass failed: {e}")
+                debug_print(f"[attention] forward pass failed: {e}")
                 return None
 
         summary = model.get_attention_summary(pred_vocab_labels=pred_vocab_labels)
         model.set_attention_capture(False)
 
         if not summary:
-            print(f"[attention] No attention weights captured for {image_name}")
+            debug_print(f"[attention] No attention weights captured for {image_name}")
             return None
 
         # Format summary text with visual bar chart
@@ -750,13 +751,13 @@ def generate_attention_visualization(
                 lines.append(f"    {mod_name:20s}: {weight:.4f}  {bar}")
 
         text = "\n".join(lines)
-        print(f"\n[attention_analysis]\n{text}")
+        debug_print(f"\n[attention_analysis]\n{text}")
 
         # -- Save JSON --
         json_path = os.path.join(output_dir, f"{image_name}_attention.json")
         with open(json_path, "w") as f:
             json.dump(summary, f, indent=2)
-        print(f"[attention] visualization saved to {json_path}")
+        debug_print(f"[attention] visualization saved to {json_path}")
 
         # -- Save text (UTF-8 to handle Unicode bar characters) --
         txt_path = os.path.join(output_dir, f"{image_name}_attention.txt")
@@ -768,9 +769,9 @@ def generate_attention_visualization(
         try:
             with open(per_pred_path, "w") as f:
                 json.dump(summary, f, indent=2)
-            print(f"[attention] per-predicate attention saved to {per_pred_path}")
+            debug_print(f"[attention] per-predicate attention saved to {per_pred_path}")
         except Exception as e:
-            print(f"[attention] could not save per-predicate attention: {e}")
+            debug_print(f"[attention] could not save per-predicate attention: {e}")
 
         # -- Save modality contribution image --
         try:
@@ -779,7 +780,7 @@ def generate_attention_visualization(
                 os.path.join(output_dir, f"{image_name}_modality_contributions.png"),
             )
         except Exception as e:
-            print(f"[attention] could not save modality chart: {e}")
+            debug_print(f"[attention] could not save modality chart: {e}")
 
         return json_path
 
@@ -797,16 +798,16 @@ def generate_attention_visualization(
             lines.append(f"  {name:20s}: {val:.4f}  {bar}")
 
         text = "\n".join(lines)
-        print(f"\n[attention_analysis] (MLP proxy)\n{text}")
+        debug_print(f"\n[attention_analysis] (MLP proxy)\n{text}")
 
         json_path = os.path.join(output_dir, f"{image_name}_attention.json")
         with open(json_path, "w") as f:
             json.dump(contrib, f, indent=2)
 
-        print(f"[eval_debug] Phase 5: MLP feature contribution saved to {json_path}")
+        debug_print(f"[eval_debug] Phase 5: MLP feature contribution saved to {json_path}")
         return json_path
     except Exception as e:
-        print(f"[attention_analysis] Skipped ({e})")
+        debug_print(f"[attention_analysis] Skipped ({e})")
         return None
 
 
@@ -846,7 +847,7 @@ def _save_modality_contribution_chart(
     plt.tight_layout()
     fig.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
-    print(f"[attention] modality contribution chart saved to {save_path}")
+    debug_print(f"[attention] modality contribution chart saved to {save_path}")
 
 
 # ===================================================================
@@ -1143,7 +1144,7 @@ def build_final_evaluation_table(
                 severity,
             ])
 
-    print(f"[eval_debug] Phase 8: Evaluation table saved to {path}")
+    debug_print(f"[eval_debug] Phase 8: Evaluation table saved to {path}")
     return path
 
 
@@ -1313,6 +1314,6 @@ def generate_final_report(
         for imp in report["most_improved_relation_types"]:
             f.write(f"  * {imp}\n")
 
-    print(f"[eval_debug] Phase 9: Final report saved to {path}")
-    print(f"[eval_debug] Phase 9: Text summary saved to {txt_path}")
+    debug_print(f"[eval_debug] Phase 9: Final report saved to {path}")
+    debug_print(f"[eval_debug] Phase 9: Text summary saved to {txt_path}")
     return path

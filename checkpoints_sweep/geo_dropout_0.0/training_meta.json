@@ -1,6 +1,6 @@
 {
-  "timestamp": 1779806790.5593612,
-  "mode": "visual-semantic+strict+pose+pose_object+union+geo_dropout(0.3)",
+  "timestamp": 1779911217.846877,
+  "mode": "visual-semantic+strict+pose+pose_object+union+geo_dropout(0.0)",
   "model_type": "transformer",
   "use_visual": true,
   "require_visual": true,

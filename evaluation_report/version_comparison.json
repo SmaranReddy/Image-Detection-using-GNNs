@@ -1,0 +1,196 @@
+{
+  "config": {
+    "image_dir": "test_images",
+    "checkpoint_dirs": {
+      "V0": "./checkpoints",
+      "V2": "./checkpoints_v2"
+    }
+  },
+  "image_metadata": {
+    "test_images\\bicycle.jpg": {
+      "detections": [
+        "person",
+        "bicycle",
+        "backpack"
+      ],
+      "num_raw": 3,
+      "num_verified": 3
+    },
+    "test_images\\car.jpg": {
+      "detections": [
+        "car"
+      ],
+      "num_raw": 1,
+      "num_verified": 1
+    },
+    "test_images\\dog.jpg": {
+      "detections": [
+        "person",
+        "dog"
+      ],
+      "num_raw": 2,
+      "num_verified": 2
+    },
+    "test_images\\multiobject.jpg": {
+      "detections": [
+        "cup",
+        "laptop",
+        "book"
+      ],
+      "num_raw": 3,
+      "num_verified": 3
+    },
+    "test_images\\sitting.jpg": {
+      "detections": [
+        "person",
+        "potted plant",
+        "chair",
+        "chair"
+      ],
+      "num_raw": 5,
+      "num_verified": 4
+    }
+  },
+  "aggregate": {
+    "V0": {
+      "total_relations": 3,
+      "total_images": 5,
+      "semantic_count": 3,
+      "weak_spatial_count": 0,
+      "neutral_spatial_count": 0,
+      "predicate_distribution": {
+        "riding": 1,
+        "carrying": 1,
+        "sitting on": 1
+      },
+      "total_pairs_evaluated": 23,
+      "total_rejected": 18,
+      "rejection_reasons": {
+        "rejected_calibration": 18
+      }
+    },
+    "V2": {
+      "total_relations": 3,
+      "total_images": 5,
+      "semantic_count": 3,
+      "weak_spatial_count": 0,
+      "neutral_spatial_count": 0,
+      "predicate_distribution": {
+        "wearing": 1,
+        "carrying": 1,
+        "sitting on": 1
+      },
+      "total_pairs_evaluated": 22,
+      "total_rejected": 17,
+      "rejection_reasons": {
+        "rejected_calibration": 17
+      }
+    }
+  },
+  "comparison_table": [
+    {
+      "image": "bicycle",
+      "detections": "person, bicycle, backpack",
+      "per_version": {
+        "V0": [
+          "person->riding->bicycle"
+        ],
+        "V2": [
+          "person->wearing->backpack"
+        ]
+      }
+    },
+    {
+      "image": "car",
+      "detections": "car",
+      "per_version": {
+        "V0": [
+          "(none)"
+        ],
+        "V2": [
+          "(none)"
+        ]
+      }
+    },
+    {
+      "image": "dog",
+      "detections": "person, dog",
+      "per_version": {
+        "V0": [
+          "person->carrying->dog"
+        ],
+        "V2": [
+          "person->carrying->dog"
+        ]
+      }
+    },
+    {
+      "image": "multiobject",
+      "detections": "cup, laptop, book",
+      "per_version": {
+        "V0": [
+          "(none)"
+        ],
+        "V2": [
+          "(none)"
+        ]
+      }
+    },
+    {
+      "image": "sitting",
+      "detections": "person, potted plant, chair, chair",
+      "per_version": {
+        "V0": [
+          "person->sitting on->chair"
+        ],
+        "V2": [
+          "person->sitting on->chair"
+        ]
+      }
+    }
+  ],
+  "feature_summary": {
+    "V0": {
+      "avg_norms": {
+        "subj_label": 4.1169,
+        "obj_label": 5.4357,
+        "geo": 2.5529,
+        "subj_clip": 8.6753,
+        "obj_clip": 8.2609,
+        "union_clip": 8.6185,
+        "pose": 1.6546
+      },
+      "pct": {
+        "subj_clip": 22.1,
+        "union_clip": 21.9,
+        "obj_clip": 21.0,
+        "obj_label": 13.8,
+        "subj_label": 10.5,
+        "geo": 6.5,
+        "pose": 4.2
+      }
+    },
+    "V2": {
+      "avg_norms": {
+        "subj_label": 4.2399,
+        "obj_label": 4.5204,
+        "geo": 1.3633,
+        "subj_clip": 6.1052,
+        "obj_clip": 5.1857,
+        "union_clip": 5.9791,
+        "pose": 1.0068,
+        "pose_object": 1.1493
+      },
+      "pct": {
+        "subj_clip": 20.7,
+        "union_clip": 20.2,
+        "obj_clip": 17.5,
+        "obj_label": 15.3,
+        "subj_label": 14.3,
+        "geo": 4.6,
+        "pose_object": 3.9,
+        "pose": 3.4
+      }
+    }
+  }
+}
