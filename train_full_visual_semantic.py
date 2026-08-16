@@ -34,7 +34,7 @@ from collections import Counter, defaultdict
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, Subset, random_split
 import numpy as np
 
 PROJ_ROOT = Path(__file__).resolve().parent
@@ -69,6 +69,7 @@ REQUIRE_VISUAL = False
 USE_POSE = False
 USE_UNION = False
 MODEL_TYPE = "mlp"
+SPLIT_MANIFEST = None   # path to a frozen image-disjoint split manifest (E0 protocol)
 
 SEMANTIC_PREDICATES = frozenset({
     "riding", "carrying", "holding", "wearing", "sitting on", "standing on",
@@ -287,6 +288,122 @@ def analyze_clip_coverage(full_ds):
 # Main Training
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Frozen image-disjoint split (E0 protocol)
+# ---------------------------------------------------------------------------
+
+def _sample_image_ids(dataset):
+    """Recover the VG image_id of every RETAINED dataset sample.
+
+    VGRelationshipDataset does not expose image_id directly, but sample_keys
+    carries it as "<image_id>_obj_<object_id>" (built in _load and kept in
+    sync by _filter_strict_visual). Returns a list aligned with
+    dataset.samples; None where no object_id was present in the annotation.
+    """
+    ids = []
+    for subj_key, obj_key in dataset.sample_keys:
+        key = subj_key or obj_key
+        if key and "_obj_" in key:
+            try:
+                ids.append(int(key.split("_obj_")[0]))
+            except ValueError:
+                ids.append(None)
+        else:
+            ids.append(None)
+    return ids
+
+
+def split_by_manifest(dataset, manifest_path):
+    """Split the dataset with the frozen E0 image-disjoint manifest.
+
+    The manifest is authoritative and is never regenerated here. Assignment
+    uses the FINAL retained samples' image_id, so no sample from a test image
+    can reach train or validation regardless of the dataset's own filtering.
+
+    Returns (train_subset, val_subset, info).
+    """
+    if not os.path.isfile(manifest_path):
+        raise SystemExit(f"[split] Manifest not found: {manifest_path}")
+
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        manifest = json.load(f)
+    for key in ("train_ids", "val_ids", "test_ids"):
+        if key not in manifest:
+            raise SystemExit(f"[split] Manifest missing '{key}': {manifest_path}")
+
+    train_ids = {int(i) for i in manifest["train_ids"]}
+    val_ids = {int(i) for i in manifest["val_ids"]}
+    test_ids = {int(i) for i in manifest["test_ids"]}
+
+    overlap_tr_va = len(train_ids & val_ids)
+    overlap_tr_te = len(train_ids & test_ids)
+    overlap_va_te = len(val_ids & test_ids)
+    overlap_total = overlap_tr_va + overlap_tr_te + overlap_va_te
+
+    sample_iids = _sample_image_ids(dataset)
+    train_idx, val_idx = [], []
+    n_test_excluded = 0
+    n_unattributed = 0
+    train_imgs, val_imgs = set(), set()
+
+    for i, iid in enumerate(sample_iids):
+        if iid is None:
+            n_unattributed += 1
+            continue
+        if iid in train_ids:
+            train_idx.append(i)
+            train_imgs.add(iid)
+        elif iid in val_ids:
+            val_idx.append(i)
+            val_imgs.add(iid)
+        elif iid in test_ids:
+            n_test_excluded += 1
+        else:
+            n_unattributed += 1
+
+    print(f"\n{'=' * 78}")
+    print("  FROZEN IMAGE-DISJOINT SPLIT (E0 protocol)")
+    print(f"{'=' * 78}")
+    print(f"  Manifest:                 {manifest_path}")
+    print(f"  Manifest seed:            {manifest.get('seed')}")
+    print(f"  Split unit:               {manifest.get('split_unit')}")
+    print(f"  Train image count:        {len(train_imgs):,}  (manifest: {len(train_ids):,})")
+    print(f"  Validation image count:   {len(val_imgs):,}  (manifest: {len(val_ids):,})")
+    print(f"  Train sample count:       {len(train_idx):,}")
+    print(f"  Validation sample count:  {len(val_idx):,}")
+    print(f"  Overlap count:            {overlap_total}"
+          f"  (train n val={overlap_tr_va}, train n test={overlap_tr_te}, val n test={overlap_va_te})")
+    print(f"  Test samples excluded:    {n_test_excluded:,}  (held out, never seen in training)")
+    print(f"  Unattributed samples:     {n_unattributed:,}  (no image_id -> dropped)")
+
+    if overlap_total != 0:
+        print("\n[split] FATAL: manifest image sets overlap. Aborting.", file=sys.stderr)
+        raise SystemExit(2)
+
+    realised_overlap = len(train_imgs & val_imgs)
+    if realised_overlap != 0:
+        print(f"\n[split] FATAL: {realised_overlap} images landed in both train and val. Aborting.",
+              file=sys.stderr)
+        raise SystemExit(2)
+
+    if not train_idx or not val_idx:
+        print("\n[split] FATAL: train or validation split is empty. Aborting.", file=sys.stderr)
+        raise SystemExit(2)
+
+    info = {
+        "manifest_path": manifest_path,
+        "manifest_seed": manifest.get("seed"),
+        "n_images_train": len(train_imgs),
+        "n_images_val": len(val_imgs),
+        "n_samples_train": len(train_idx),
+        "n_samples_val": len(val_idx),
+        "overlap_count": overlap_total,
+        "n_test_samples_excluded": n_test_excluded,
+        "n_unattributed_samples": n_unattributed,
+    }
+    return Subset(dataset, train_idx), Subset(dataset, val_idx), info
+
+
 def main():
     print("=" * 78)
     print("  FULL VISUAL-SEMANTIC RELATION MLP TRAINING")
@@ -414,12 +531,19 @@ def main():
     print("  STEP 2 — DATA SPLITS")
     print(f"{'=' * 78}")
 
-    n_val = max(1, int(dataset_size * VAL_FRACTION))
-    n_train = dataset_size - n_val
-    train_ds, val_ds = random_split(
-        full_ds, [n_train, n_val],
-        generator=torch.Generator().manual_seed(SEED),
-    )
+    if SPLIT_MANIFEST:
+        # Frozen image-disjoint split (E0 protocol). Authoritative; never
+        # regenerated. Test image IDs are excluded entirely.
+        train_ds, val_ds, _split_info = split_by_manifest(full_ds, SPLIT_MANIFEST)
+    else:
+        # Legacy behaviour: sample-level random split (image-leaking).
+        n_val = max(1, int(dataset_size * VAL_FRACTION))
+        n_train = dataset_size - n_val
+        train_ds, val_ds = random_split(
+            full_ds, [n_train, n_val],
+            generator=torch.Generator().manual_seed(SEED),
+        )
+        print("  [WARNING] sample-level random_split: train/val share images (leakage).")
     print(f"  Training samples:   {len(train_ds):,}")
     print(f"  Validation samples: {len(val_ds):,}")
 
@@ -1039,6 +1163,11 @@ Examples:
     parser.add_argument("--model", type=str, default=MODEL_TYPE, choices=["mlp", "transformer"],
                         help="Model architecture (mlp or transformer)")
     parser.add_argument("--vg-root", type=str, default=str(VG_ROOT))
+    parser.add_argument("--split-manifest", type=str, default=None,
+                        help="Frozen image-disjoint split manifest (e.g. "
+                             "splits/e0_image_split.json). When supplied it "
+                             "replaces random_split and is treated as "
+                             "authoritative; test image IDs are never used.")
     args = parser.parse_args()
 
     USE_VISUAL = args.use_visual
@@ -1050,6 +1179,7 @@ Examples:
     LR = args.lr
     SEED = args.seed
     MODEL_TYPE = args.model
+    SPLIT_MANIFEST = args.split_manifest
     CHECKPOINT_DIR = Path(args.checkpoint_dir)
     VG_ROOT = Path(args.vg_root)
     VG_IMAGE_DIR = VG_ROOT / "images"
