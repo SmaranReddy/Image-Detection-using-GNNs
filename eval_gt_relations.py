@@ -49,13 +49,20 @@ from relation_prediction.vg_dataset import (
     VGRelationshipDataset,
     Vocab,
     GEO_DIM,
+    GEO_DIM_EXT,
     MIN_BOX_SIZE,
     POSE_FEATURE_DIM,
     UNION_FEATURE_DIM,
     ALLOWED_PREDICATES,
     normalize_predicate,
+    normalize_predicate_v2,
+    predicate_normalizer,
+    reachable_predicates,
+    PREDICATE_SCHEMES,
     normalize_label,
     extract_geo_features,
+    extract_geo_features_ext,
+    geo_extractor,
     _get_name,
     _xywh_to_xyxy,
 )
@@ -117,7 +124,24 @@ def stream_relationship_records(path: str):
                     pos = 0
 
 
-def build_samples(vg_root: str, label_vocab: Vocab, pred_vocab: Vocab):
+def _geo_mode_for_dim(geo_dim: int) -> str:
+    """Name the geometry mode a checkpoint's width implies.
+
+    Only used when a checkpoint predates the geo_mode field. The 0 case
+    matters: without it a visual-only model (geo_dim=0) is silently read back
+    as "basic" and then fed 5 geometry columns it has no weights for.
+    """
+    if geo_dim == GEO_DIM_EXT:
+        return "ext"
+    if geo_dim == GEO_DIM:
+        return "basic"
+    if geo_dim == 0:
+        return "none"
+    raise ValueError(f"cannot infer geo_mode from geo_dim={geo_dim}")
+
+
+def build_samples(vg_root: str, label_vocab: Vocab, pred_vocab: Vocab,
+                  geo_mode: str = "basic", predicate_scheme: str = "v1"):
     """Apply the repository's existing filtering behaviour to every relation.
 
     Mirrors VGRelationshipDataset._load exactly: predicate normalisation +
@@ -128,6 +152,9 @@ def build_samples(vg_root: str, label_vocab: Vocab, pred_vocab: Vocab):
         samples: list of (image_id, subj_idx, obj_idx, geo(list[5]), pred_idx)
         stats:   dict of census counters
     """
+    geo_fn, _ = geo_extractor(geo_mode)
+    pred_fn = predicate_normalizer(predicate_scheme)
+
     img_json = os.path.join(vg_root, "image_data.json")
     rel_json = os.path.join(vg_root, "relationships.json")
     for p in (img_json, rel_json):
@@ -153,7 +180,7 @@ def build_samples(vg_root: str, label_vocab: Vocab, pred_vocab: Vocab):
 
         for r in img.get("relationships", []):
             total_raw += 1
-            pred = normalize_predicate(r.get("predicate", ""))
+            pred = pred_fn(r.get("predicate", ""))
             if pred is None:
                 continue
 
@@ -181,7 +208,7 @@ def build_samples(vg_root: str, label_vocab: Vocab, pred_vocab: Vocab):
                 skipped_small += 1
                 continue
 
-            geo = extract_geo_features(subj_box, obj_box, img_w, img_h)
+            geo = geo_fn(subj_box, obj_box, img_w, img_h)
 
             samples.append((
                 int(iid),
@@ -255,8 +282,9 @@ def sha256_file(path: str) -> str:
     return h.hexdigest()
 
 
-def load_checkpoint(checkpoint_dir: str, device: torch.device):
-    model_path = os.path.join(checkpoint_dir, "relation_mlp.pt")
+def load_checkpoint(checkpoint_dir: str, device: torch.device,
+                    checkpoint_file: str = "relation_mlp.pt"):
+    model_path = os.path.join(checkpoint_dir, checkpoint_file)
     lv_path = os.path.join(checkpoint_dir, "label_vocab.json")
     pv_path = os.path.join(checkpoint_dir, "pred_vocab.json")
     for p in (model_path, lv_path, pv_path):
@@ -277,6 +305,10 @@ def load_checkpoint(checkpoint_dir: str, device: torch.device):
         clip_dim = cfg_in.get("clip_dim", 0)
         pose_dim = cfg_in.get("pose_dim", 0)
         union_dim = cfg_in.get("union_dim", 0)
+        # Checkpoints written before the extended geometry descriptor existed
+        # carry no geo_dim; they are 5-dim by definition.
+        geo_dim = cfg_in.get("geo_dim", GEO_DIM)
+        geo_norm = bool(cfg_in.get("geo_norm", False))
 
         model = RelationTransformer(
             num_labels=len(label_vocab),
@@ -286,6 +318,8 @@ def load_checkpoint(checkpoint_dir: str, device: torch.device):
             clip_dim=clip_dim,
             pose_dim=pose_dim,
             union_dim=union_dim,
+            geo_dim=geo_dim,
+            geo_norm=geo_norm,
         )
         model.load_state_dict(state)
         model.to(device)
@@ -304,7 +338,9 @@ def load_checkpoint(checkpoint_dir: str, device: torch.device):
                 "clip_dim": clip_dim,
                 "pose_dim": pose_dim,
                 "union_dim": union_dim,
-                "geo_dim": GEO_DIM,
+                "geo_dim": geo_dim,
+                "geo_norm": geo_norm,
+                "geo_mode": cfg_in.get("geo_mode", _geo_mode_for_dim(geo_dim)),
                 "feature_mode": "+".join(
                     ["geometry"]
                     + (["clip"] if clip_dim else [])
@@ -327,14 +363,28 @@ def load_checkpoint(checkpoint_dir: str, device: torch.device):
         clip_dim = config.get("clip_dim", 0)
         pose_dim = config.get("pose_dim", 0)
         union_dim = config.get("union_dim", 0)
+        geo_dim = config.get("geo_dim", GEO_DIM)
+        geo_norm = bool(config.get("geo_norm", False))
         wrapper = "model_state_dict+model_config"
     else:
         state = raw
         embed_dim = state["label_emb.weight"].shape[1]
         hidden_dims = _infer_hidden_dims(state)
-        clip_dim = _infer_clip_dim(state, embed_dim)
         pose_dim = 0
         union_dim = 0
+        # A bare state_dict carries no config, so the geometry width has to be
+        # recovered from the weights. When the model was trained with
+        # --geo-norm the BatchNorm buffer IS the geometry width; only without
+        # it must we fall back to the legacy 5.
+        #
+        # This previously hardcoded geo_dim = GEO_DIM (5) and then called
+        # _infer_clip_dim without it, so a bare 19-dim geometry checkpoint was
+        # silently reconstructed as geo_dim=5 + clip_dim=7 — a model that loads
+        # without error and computes nonsense. predict.py already had this fix;
+        # this loader did not, and the two must agree.
+        geo_norm = "geo_norm.weight" in state
+        geo_dim = int(state["geo_norm.weight"].shape[0]) if geo_norm else GEO_DIM
+        clip_dim = _infer_clip_dim(state, embed_dim, geo_dim)
         wrapper = "bare_state_dict"
 
     model = RelationMLP(
@@ -345,6 +395,8 @@ def load_checkpoint(checkpoint_dir: str, device: torch.device):
         clip_dim=clip_dim,
         pose_dim=pose_dim,
         union_dim=union_dim,
+        geo_dim=geo_dim,
+        geo_norm=geo_norm,
     )
     model.load_state_dict(state)
     model.to(device)
@@ -364,8 +416,11 @@ def load_checkpoint(checkpoint_dir: str, device: torch.device):
             "clip_dim": clip_dim,
             "pose_dim": pose_dim,
             "union_dim": union_dim,
-            "geo_dim": GEO_DIM,
-            "input_dim": 2 * embed_dim + GEO_DIM + 2 * clip_dim + union_dim + pose_dim,
+            "geo_dim": geo_dim,
+            "geo_norm": geo_norm,
+            "geo_mode": (config.get("geo_mode") if wrapper != "bare_state_dict" else None)
+                        or _geo_mode_for_dim(geo_dim),
+            "input_dim": 2 * embed_dim + geo_dim + 2 * clip_dim + union_dim + pose_dim,
             "feature_mode": "geometry-only" if clip_dim == 0 else "+".join(
                 ["geometry", "clip"]
                 + (["union"] if union_dim else [])
@@ -408,6 +463,7 @@ def build_visual_test_set(vg_root, vg_image_dir, clip_cache_path, cfg,
         require_visual=True,
         use_pose=use_pose,
         use_union=use_union,
+        geo_mode=cfg.get("geo_mode", "basic"),
     )
 
     test_set = {int(i) for i in test_ids}
@@ -571,6 +627,10 @@ def main() -> None:
     parser.add_argument("--split-manifest", default=SPLIT_MANIFEST)
     parser.add_argument("--results-dir", default=RESULTS_DIR)
     parser.add_argument("--seed", type=int, default=SEED)
+    parser.add_argument("--predicate-scheme", type=str, default=None,
+                        choices=list(PREDICATE_SCHEMES),
+                        help="Override the predicate normaliser. Default: the "
+                             "scheme recorded in the checkpoint, else 'v1'.")
     parser.add_argument("--train-frac", type=float, default=TRAIN_FRAC)
     parser.add_argument("--val-frac", type=float, default=VAL_FRAC)
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
@@ -582,10 +642,17 @@ def main() -> None:
     parser.add_argument("--clip-cache-path", type=str, default=None,
                         help="CLIP cache (visual checkpoints only; "
                              "default <vg-root>/clip_cache_proper.pt)")
+    parser.add_argument("--force-visual-population", action="store_true",
+                        help="Restrict the test set to samples with complete "
+                             "CLIP features even for a geometry-only "
+                             "checkpoint. Use this to score a geometry model "
+                             "on the same population as a visual one.")
     parser.add_argument("--output-name", type=str, default=None,
                         help="Result basename without .json. Default: "
                              "'transformer_e1' for transformer checkpoints, "
                              "else the checkpoint filename.")
+    parser.add_argument("--checkpoint-file", type=str, default="relation_mlp.pt",
+                        help="Checkpoint filename inside --checkpoint-dir")
     parser.add_argument("--force", action="store_true",
                         help="Allow overwriting an existing result file that "
                              "belongs to a different checkpoint")
@@ -605,7 +672,9 @@ def main() -> None:
 
     # --- 1. checkpoint --------------------------------------------------
     print("[1/6] Loading checkpoint …")
-    model, label_vocab, pred_vocab, ckpt_info = load_checkpoint(args.checkpoint_dir, device)
+    model, label_vocab, pred_vocab, ckpt_info = load_checkpoint(
+        args.checkpoint_dir, device, args.checkpoint_file,
+    )
     cfg = ckpt_info["inferred_config"]
     print(f"      format      : {cfg['wrapper_format']}")
     print(f"      model type  : {cfg['model_type']}")
@@ -615,6 +684,8 @@ def main() -> None:
     else:
         print(f"      embed_dim   : {cfg['embed_dim']}   hidden: {cfg['hidden_dims']}")
         print(f"      input_dim   : {cfg['input_dim']}")
+    print(f"      geometry    : {cfg.get('geo_mode', 'basic')} "
+          f"({cfg['geo_dim']}-dim, batchnorm={cfg.get('geo_norm', False)})")
     print(f"      features    : {cfg['feature_mode']} "
           f"(clip={cfg['clip_dim']}, union={cfg['union_dim']}, pose={cfg['pose_dim']})")
     print(f"      parameters  : {ckpt_info['parameter_count']:,}")
@@ -628,7 +699,17 @@ def main() -> None:
 
     # --- 2. samples -----------------------------------------------------
     print("\n[2/6] Streaming relationships.json and applying repo filters …")
-    samples, data_stats = build_samples(args.vg_root, label_vocab, pred_vocab)
+    # The evaluation MUST reconstruct samples with the same predicate
+    # normaliser the checkpoint was trained with, or the test population
+    # silently differs from the training population.
+    pred_scheme = args.predicate_scheme or cfg.get("predicate_scheme") or "v1"
+    cfg["predicate_scheme"] = pred_scheme
+    print(f"      predicate scheme: {pred_scheme}"
+          f"{' (from checkpoint)' if not args.predicate_scheme else ' (from --predicate-scheme)'}")
+    samples, data_stats = build_samples(
+        args.vg_root, label_vocab, pred_vocab, geo_mode=cfg.get("geo_mode", "basic"),
+        predicate_scheme=pred_scheme,
+    )
     qualifying_images = sorted({s[0] for s in samples})
     data_stats["qualifying_image_count"] = len(qualifying_images)
     print(f"      raw relationships : {data_stats['raw_count']:,}")
@@ -701,8 +782,10 @@ def main() -> None:
             "filter_fingerprint": {
                 "source": "relation_prediction/vg_dataset.py (imported unchanged)",
                 "min_box_size": MIN_BOX_SIZE,
+                "predicate_scheme": pred_scheme,
                 "n_allowed_predicates": len(ALLOWED_PREDICATES),
                 "allowed_predicates": sorted(ALLOWED_PREDICATES),
+                "reachable_predicates": reachable_predicates(pred_scheme),
                 "label_space": "COCO_LABELS via normalize_label; UNK dropped",
             },
             "data": data_stats,
@@ -718,7 +801,13 @@ def main() -> None:
 
     # --- 4. inference on the TEST split ---------------------------------
     print("\n[4/6] Running inference on the TEST split (raw logits only) …")
-    needs_visual = cfg["clip_dim"] > 0 or cfg["pose_dim"] > 0 or cfg["union_dim"] > 0
+    # A checkpoint trained with --visual-filter-only has clip_dim=0 but was
+    # fitted on the visual-complete subset, so it must be SCORED on that subset
+    # too. Deciding from clip_dim alone would silently score the ablation's
+    # geometry control on a larger test set than its CLIP counterparts.
+    needs_visual = (cfg["clip_dim"] > 0 or cfg["pose_dim"] > 0 or cfg["union_dim"] > 0
+                    or bool(cfg.get("visual_filter_only"))
+                    or args.force_visual_population)
 
     if needs_visual:
         # E1 path: CLIP / union / pose features, ground-truth boxes only.
@@ -737,6 +826,30 @@ def main() -> None:
         counts["n_images_test_evaluated"] = vis["n_images"]
         print(f"      visual test samples: {len(gt_idxs):,} "
               f"over {vis['n_images']:,} test images")
+
+        # A visual checkpoint is scored only on test samples whose VG image and
+        # CLIP embedding exist. When coverage is partial, that is a DIFFERENT,
+        # easier-or-harder test set than the geometry census, and its top-1 is
+        # NOT comparable with a geometry-only result. Make that explicit rather
+        # than letting the two numbers be put side by side in a table.
+        census = counts["n_samples_test_geometry_census"]
+        coverage = len(gt_idxs) / max(census, 1)
+        counts["test_set_coverage_vs_geometry_census"] = round(coverage, 6)
+        counts["comparable_to_geometry_census"] = coverage >= 0.99
+        print(f"      coverage vs geometry census: {coverage:.1%} "
+              f"({len(gt_idxs):,} / {census:,})")
+        if coverage < 0.99:
+            print()
+            print("      " + "!" * 62)
+            print("      WARNING: this checkpoint was evaluated on a SUBSET of the")
+            print("      frozen test split, because VG images / CLIP embeddings are")
+            print("      missing for the rest. Top-1 here is NOT comparable with a")
+            print("      geometry-only result measured on the full census.")
+            print("      Either complete the VG image download and rebuild the CLIP")
+            print("      cache, or compare only against another model scored on this")
+            print("      same subset.")
+            print("      " + "!" * 62)
+            print()
     else:
         test = buckets["test"]
         if not test:

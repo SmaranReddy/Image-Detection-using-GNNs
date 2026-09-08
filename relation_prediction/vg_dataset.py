@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import os
 import random
+import re
 from collections import Counter, defaultdict
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -65,7 +66,6 @@ SYNONYM_MAP: Dict[str, str] = {
     "phone":        "cell phone",
     "motorbike":    "motorcycle",
     "aeroplane":    "airplane", "aero plane": "airplane",
-    "dining table": "dining table",
     "plant":        "potted plant",
 }
 
@@ -91,16 +91,157 @@ PREDICATE_MAP: Dict[str, str] = {
     "riding on":    "riding", "mounted on": "riding",
     "holding in":   "holding", "grasping": "holding",
     "gripping":     "holding",
-    "carrying in":  "carrying", "carried by": "carrying",
+    "carrying in":  "carrying",
 }
+
+# Passive surface forms. "A carried by B" means B carries A, so rewriting the
+# string while subject and object stay put labels the pair BACKWARDS. A passive
+# can only be normalised by also swapping the two entities, which a pure string
+# function cannot do — so these are rejected, never mapped.
+PASSIVE_PREDICATES: frozenset = frozenset({
+    "carried by", "held by", "worn by", "ridden by", "covered by",
+    "used by", "eaten by", "pulled by", "pushed by",
+})
+
+# Scheme "v1" is FROZEN: it is the normaliser the published E0 / E2 numbers
+# were measured under, and its only job is to reproduce them bit-for-bit.
+# It contains one known defect — `"carried by": "carrying"`, which injected 29
+# subject/object-reversed pairs — that is deliberately preserved here and fixed
+# in scheme "v2". Removing it from v1 changes the corpus from 68,900 to 68,871
+# samples and silently invalidates every frozen number in results/.
+_V1_PREDICATE_MAP: Dict[str, str] = dict(PREDICATE_MAP, **{"carried by": "carrying"})
 
 
 def normalize_predicate(pred: str) -> Optional[str]:
+    """Scheme "v1" (FROZEN) predicate normalisation: exact-match map + allowlist.
+
+    Do not change this function. It defines the sample population behind the
+    published E0/E2 results; any edit here silently moves those numbers. New
+    normalisation work belongs in ``normalize_predicate_v2``.
+    """
     pred = pred.lower().strip()
-    pred = PREDICATE_MAP.get(pred, pred)
+    pred = _V1_PREDICATE_MAP.get(pred, pred)
     if pred not in ALLOWED_PREDICATES:
         return None
     return pred
+
+
+# ---------------------------------------------------------------------------
+# Scheme "v2": surface-form normalisation
+# ---------------------------------------------------------------------------
+# VG predicates are free text. Under scheme "v1" every inflection ("holds"),
+# every trailing article ("on a") and every common paraphrase ("laying on")
+# falls outside ALLOWED_PREDICATES and is DISCARDED — 12,963 annotations whose
+# both endpoints are already COCO-80 objects, i.e. +18.4% supervision, thrown
+# away for purely syntactic reasons.
+#
+# Scheme "v2" recovers them. It maps only onto the SAME 19 predicate classes:
+# no class is added, split or merged, and no passive is rewritten, so the
+# label space is unchanged and v1/v2 models are directly comparable.
+#
+# Measured effect (frozen E0 split, 3 seeds, identical 10,227 test samples):
+#   top-1     0.6346 +/- 0.0033  (v1)  ->  0.6335 +/- 0.0022  (v2)   no change
+#   macro-F1  0.3742 +/- 0.0031  (v1)  ->  0.3804 +/- 0.0048  (v2)   small gain
+#   "carrying" F1 0.218 -> 0.332
+# It is retained as a correctness/coverage fix and for the rare classes, NOT
+# as a top-1 improvement: see the root-cause report.
+
+_V2_LEADING_COPULA = re.compile(r"^(?:is|are|was|were|be|being|am)\s+")
+_V2_TRAILING_DET = re.compile(r"\s+(?:a|an|the)$")
+
+_V2_SURFACE_MAP: Dict[str, str] = {
+    # --- inflections of predicates already in the vocabulary ---------------
+    "holds": "holding", "hold": "holding", "holding onto": "holding",
+    "grasps": "holding", "grips": "holding",
+    "rides": "riding", "ride": "riding", "rode": "riding",
+    "wears": "wearing", "wear": "wearing",
+    "carries": "carrying", "carry": "carrying",
+    "sits on": "sitting on", "sat on": "sitting on", "seated on": "sitting on",
+    "sits atop": "sitting on", "sitting on top of": "sitting on",
+    "stands on": "standing on", "stood on": "standing on",
+    "watches": "looking at", "watch": "looking at", "watching": "looking at",
+    "looks at": "looking at", "look at": "looking at",
+    "stares at": "looking at", "staring at": "looking at",
+    "covers": "covering", "covered with": "covering",
+    # --- paraphrases of the spatial predicates -----------------------------
+    "laying on": "on", "lays on": "on", "lay on": "on", "lying on": "on",
+    "sleeping on": "on", "sitting atop": "on", "atop": "on", "on top": "on",
+    "on back of": "on", "on side of": "on", "on front of": "on",
+    "are on": "on", "is on": "on",
+    "inside of": "inside", "in side of": "inside", "within": "inside",
+    "beneath": "under",
+    "standing next to": "near", "standing near": "near", "standing by": "near",
+    "standing beside": "near", "sitting next to": "near",
+    "walking next to": "near", "walking near": "near",
+    "adjacent to": "near", "nearby": "near", "near to": "near",
+    "standing behind": "behind", "sitting behind": "behind",
+    "walking behind": "behind", "in back of": "behind", "at back of": "behind",
+    "back of": "behind",
+    "standing in front of": "in front of", "sitting in front of": "in front of",
+    "walking in front of": "in front of", "front of": "in front of",
+    "attached on": "attached to", "connected to": "attached to",
+}
+
+
+def normalize_predicate_v2(pred: str) -> Optional[str]:
+    """Surface-form predicate normalisation onto the SAME 19 classes.
+
+    Pipeline: whitespace-collapse -> strip leading copula -> strip trailing
+    determiner -> surface map -> legacy PREDICATE_MAP -> allowlist.
+
+    Passives (``PASSIVE_PREDICATES``) are rejected outright rather than mapped,
+    because rewriting them without swapping subject and object would label the
+    pair backwards.
+    """
+    p = " ".join((pred or "").lower().strip().split())
+    if not p:
+        return None
+    if p in PASSIVE_PREDICATES:
+        return None
+    p = _V2_LEADING_COPULA.sub("", p)
+    for _ in range(2):                      # "riding a", "sitting on a"
+        stripped = _V2_TRAILING_DET.sub("", p)
+        if stripped == p:
+            break
+        p = stripped
+    if p in PASSIVE_PREDICATES:
+        return None
+    # Two rewrite passes: a surface form may land on another mapped form
+    # (e.g. "standing next to" -> "near", "next to" -> "near").
+    for _ in range(2):
+        rewritten = _V2_SURFACE_MAP.get(p) or PREDICATE_MAP.get(p)
+        if rewritten is None or rewritten == p:
+            break
+        p = rewritten
+    return p if p in ALLOWED_PREDICATES else None
+
+
+PREDICATE_SCHEMES = ("v1", "v2")
+
+
+def predicate_normalizer(scheme: str = "v1"):
+    """Return the predicate normalisation function for a scheme name."""
+    if scheme == "v1":
+        return normalize_predicate
+    if scheme == "v2":
+        return normalize_predicate_v2
+    raise ValueError(
+        f"unknown predicate_scheme {scheme!r} (expected one of {PREDICATE_SCHEMES})"
+    )
+
+
+def reachable_predicates(scheme: str = "v1") -> List[str]:
+    """Predicate classes a normaliser can actually emit, sorted.
+
+    ``ALLOWED_PREDICATES`` is NOT the label set: "next to" is in the allowlist
+    but ``PREDICATE_MAP`` rewrites it to "near" first, so no annotation can
+    ever carry it. Building the vocabulary from the allowlist therefore created
+    a permanently zero-support output class (visible as
+    ``"zero_support_predicates": ["next to"]`` in every result file).
+    Building it from this function instead keeps the label space honest.
+    """
+    fn = predicate_normalizer(scheme)
+    return sorted({p for p in ALLOWED_PREDICATES if fn(p) == p})
 
 
 def normalize_label(label: str) -> str:
@@ -155,6 +296,160 @@ def extract_geo_features(
     log_hr = float(np.log(oh / sh))
     iou    = compute_iou(subj_box, obj_box)
     return [dx, dy, log_wr, log_hr, iou]
+
+
+GEO_DIM_EXT = 19  # extended geometry (see extract_geo_features_ext)
+
+GEO_EXT_FEATURE_NAMES: List[str] = [
+    "dx_img", "dy_img", "log_w_ratio", "log_h_ratio", "iou",
+    "dx_subj", "dy_subj", "log_area_ratio",
+    "inter_over_subj", "inter_over_obj",
+    "subj_rel_scale", "obj_rel_scale",
+    "subj_cy_img", "obj_cy_img",
+    "gap_obj_below_subj", "gap_subj_below_obj",
+    "log_subj_aspect", "log_obj_aspect", "centre_distance",
+]
+
+
+def extract_geo_features_ext(
+    subj_box: Tuple[float, float, float, float],
+    obj_box:  Tuple[float, float, float, float],
+    img_w: float, img_h: float,
+) -> List[float]:
+    """Extended 19-dim geometry descriptor for the same subject/object boxes.
+
+    The legacy 5-dim descriptor (``extract_geo_features``) is a strict prefix of
+    this vector, so the two are directly comparable and the first five entries
+    keep their existing meaning.
+
+    The 14 added entries encode the cues the 5-dim version cannot express:
+
+      * subject-relative offsets (dx/dy divided by the SUBJECT box size rather
+        than the image) — separates "cup on table" from "person on beach";
+      * asymmetric containment (intersection / subject area and intersection /
+        object area) — IoU is symmetric and therefore cannot tell "A in B"
+        from "B in A", which is exactly the in / inside / holding confusion;
+      * absolute scale and vertical position of each box — support relations
+        ("on", "standing on", "sitting on") are strongly tied to where the
+        boxes sit in the frame, not just to their relative offset;
+      * signed vertical gaps between the boxes — direct evidence for
+        above / below / on / under;
+      * box aspect ratios — a standing person and a sitting person have very
+        different aspect ratios at the same position.
+
+    No new annotation, image or CLIP feature is required: every value is a
+    deterministic function of the two boxes and the image size that the 5-dim
+    version already receives.
+    """
+    sx1, sy1, sx2, sy2 = subj_box
+    ox1, oy1, ox2, oy2 = obj_box
+
+    sw, sh = max(sx2 - sx1, 1.0), max(sy2 - sy1, 1.0)
+    ow, oh = max(ox2 - ox1, 1.0), max(oy2 - oy1, 1.0)
+    scx, scy = (sx1 + sx2) / 2.0, (sy1 + sy2) / 2.0
+    ocx, ocy = (ox1 + ox2) / 2.0, (oy1 + oy2) / 2.0
+    denom_w, denom_h = max(img_w, 1.0), max(img_h, 1.0)
+
+    inter_w = max(0.0, min(sx2, ox2) - max(sx1, ox1))
+    inter_h = max(0.0, min(sy2, oy2) - max(sy1, oy1))
+    inter = inter_w * inter_h
+    area_s, area_o = sw * sh, ow * oh
+    union = area_s + area_o - inter
+    iou = inter / union if union > 0.0 else 0.0
+
+    dx = (ocx - scx) / denom_w
+    dy = (ocy - scy) / denom_h
+
+    return [
+        dx,
+        dy,
+        float(np.log(ow / sw)),
+        float(np.log(oh / sh)),
+        iou,
+        (ocx - scx) / sw,
+        (ocy - scy) / sh,
+        float(np.log(area_o / area_s)),
+        inter / area_s,
+        inter / area_o,
+        float(np.sqrt(area_s / (denom_w * denom_h))),
+        float(np.sqrt(area_o / (denom_w * denom_h))),
+        scy / denom_h,
+        ocy / denom_h,
+        (oy1 - sy2) / denom_h,
+        (sy1 - oy2) / denom_h,
+        float(np.log(sw / sh)),
+        float(np.log(ow / oh)),
+        float(np.hypot(dx, dy)),
+    ]
+
+
+GEO_DIM_NONE = 0  # no geometry at all (ablation control)
+
+
+def extract_geo_features_none(
+    subj_box: Tuple[float, float, float, float],
+    obj_box: Tuple[float, float, float, float],
+    img_w: float = 1.0,
+    img_h: float = 1.0,
+) -> List[float]:
+    """Emit no geometry.
+
+    Exists so the "visual only" arm of the feature ablation is a real control:
+    the model then sees label embeddings plus CLIP and nothing positional. A
+    zero-width block concatenates cleanly in RelationMLP.forward, so no other
+    code needs a special case.
+    """
+    return []
+
+
+GEO_MODES = ("none", "basic", "ext")
+
+
+def geo_extractor(geo_mode: str):
+    """Return (extractor_fn, geo_dim) for a geometry mode name."""
+    if geo_mode == "ext":
+        return extract_geo_features_ext, GEO_DIM_EXT
+    if geo_mode == "basic":
+        return extract_geo_features, GEO_DIM
+    if geo_mode == "none":
+        return extract_geo_features_none, GEO_DIM_NONE
+    raise ValueError(f"unknown geo_mode {geo_mode!r} (expected one of {GEO_MODES})")
+
+
+def stream_relationship_records(path: str):
+    """Yield relationships.json one top-level per-image record at a time.
+
+    relationships.json is ~710 MB of JSON; ``json.load`` needs several GB of
+    resident memory to materialise it, which is a real out-of-memory risk on a
+    laptop and made the dataset impossible to exercise on a machine without
+    lots of free RAM. This incremental decoder keeps peak usage to one record
+    plus a bounded read buffer, and produces exactly the same records.
+    """
+    dec = json.JSONDecoder()
+    ws = re.compile(r"[\s,]*")
+    with open(path, "r", encoding="utf-8") as f:
+        buf = f.read(1 << 22)
+        pos = buf.index("[") + 1
+        while True:
+            while True:
+                pos = ws.match(buf, pos).end()
+                if pos < len(buf) and buf[pos] == "]":
+                    return
+                try:
+                    obj, pos = dec.raw_decode(buf, pos)
+                    break
+                except ValueError:
+                    chunk = f.read(1 << 22)
+                    if not chunk:
+                        return
+                    buf = buf[pos:] + chunk
+                    pos = 0
+            yield obj
+            if len(buf) - pos < (1 << 20):
+                chunk = f.read(1 << 22)
+                if chunk:
+                    buf = buf[pos:] + chunk
+                    pos = 0
 
 
 # ---------------------------------------------------------------------------
@@ -213,7 +508,7 @@ class VGRelationshipDataset(Dataset):
         vg_image_dir: Optional[str] = None,
         label_vocab: Optional[Vocab] = None,
         pred_vocab: Optional[Vocab] = None,
-        min_pred_count: int = 50,
+        min_pred_count: int = 0,
         max_samples: Optional[int] = None,
         use_visual: bool = False,
         clip_cache_path: Optional[str] = None,
@@ -221,6 +516,8 @@ class VGRelationshipDataset(Dataset):
         require_visual: bool = False,
         use_pose: bool = False,
         use_union: bool = False,
+        geo_mode: str = "basic",
+        predicate_scheme: str = "v1",
     ) -> None:
         if require_visual and not use_visual:
             raise ValueError("require_visual=True requires use_visual=True")
@@ -238,6 +535,10 @@ class VGRelationshipDataset(Dataset):
         self.require_visual = require_visual
         self.use_pose = use_pose
         self.use_union = use_union
+        self.geo_mode = geo_mode
+        self._geo_fn, self.geo_dim = geo_extractor(geo_mode)
+        self.predicate_scheme = predicate_scheme
+        self._pred_fn = predicate_normalizer(predicate_scheme)
         self.clip_extractor: Optional[CLIPExtractor] = None
         self.pose_extractor: Optional[PoseExtractor] = None
         self.clip_cache: ClipCache = ClipCache()
@@ -294,6 +595,7 @@ class VGRelationshipDataset(Dataset):
                 print(f"  Pose features: ENABLED ({POSE_FEATURE_DIM}-dim)")
         else:
             print("\nVisual features: DISABLED (geometry-only)")
+        print(f"Geometry mode: {self.geo_mode} ({self.geo_dim}-dim)")
 
     # ------------------------------------------------------------------
 
@@ -557,11 +859,50 @@ class VGRelationshipDataset(Dataset):
     # Interaction-aware feature cache (union-region CLIP + pose)
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _union_key_for_sample(subj_key: str, obj_key: str) -> Optional[str]:
+        """Derive the union cache key from a sample's two object cache keys."""
+        if "_obj_" not in subj_key or "_obj_" not in obj_key:
+            return None
+        iid, subj_oid = subj_key.split("_obj_", 1)
+        _, obj_oid = obj_key.split("_obj_", 1)
+        return CLIPExtractor.to_union_key(iid, subj_oid, obj_oid)
+
     def _init_interaction_cache(self) -> None:
         from collections import defaultdict
         n = len(self.samples)
         self.union_feats = [torch.zeros(UNION_FEATURE_DIM) for _ in range(n)]
         self.pose_feats = [torch.zeros(POSE_FEATURE_DIM) for _ in range(n)]
+
+        # ------------------------------------------------------------------
+        # Resolve union features from the on-disk cache first.
+        #
+        # build_clip_cache.py precomputes these in batches on the GPU and
+        # stores them under CLIPExtractor.to_union_key(). Hitting the cache
+        # here turns a multi-hour per-run recomputation (one un-batched CLIP
+        # forward per sample, repeated identically for all 12 experiment runs)
+        # into a dictionary lookup, and — more importantly — makes the feature
+        # follow the object pair rather than the sample's position in the list.
+        # ------------------------------------------------------------------
+        self._union_resolved_from_cache = 0
+        self._union_pending: List[int] = []
+        if self.use_union:
+            for idx, (subj_key, obj_key) in enumerate(self.sample_keys):
+                ukey = self._union_key_for_sample(subj_key, obj_key)
+                emb = self.clip_cache.get(ukey) if ukey else None
+                if emb is not None and emb.norm().item() > 0.0:
+                    self.union_feats[idx] = emb.clone()
+                    self._union_resolved_from_cache += 1
+                else:
+                    self._union_pending.append(idx)
+            print(f"[VG] Union cache: {self._union_resolved_from_cache}/{n} "
+                  f"resolved from disk, {len(self._union_pending)} to compute")
+
+        # Nothing left that needs pixels: skip the image walk entirely.
+        if not self._union_pending and not self.use_pose:
+            if self.use_union:
+                print("[VG] Union features fully covered by cache; skipping image walk.")
+            return
 
         if self.vg_image_dir is None or not os.path.isdir(self.vg_image_dir):
             print("[VG] Interaction cache: no images dir, using zeros.")
@@ -602,6 +943,7 @@ class VGRelationshipDataset(Dataset):
                 iid = str(subj_key.split("_obj_")[0])
                 image_to_sample_idxs[iid].append(idx)
 
+        pending_set = set(self._union_pending)
         total_imgs = len(image_to_sample_idxs)
         processed = 0
         print(f"[VG] Extracting interaction features for {total_imgs} images …")
@@ -676,8 +1018,8 @@ class VGRelationshipDataset(Dataset):
 
                 total_samples_processed += 1
 
-                # Union-region CLIP embedding.
-                if self.use_union:
+                # Union-region CLIP embedding (only for samples the cache missed).
+                if self.use_union and idx in pending_set:
                     union_box = (
                         min(subj_box[0], obj_box[0]),
                         min(subj_box[1], obj_box[1]),
@@ -741,6 +1083,13 @@ class VGRelationshipDataset(Dataset):
             samples:      List of (subj_idx, obj_idx, geo_feats, pred_idx)
             sample_keys:  List of (subj_cache_key, obj_cache_key)
                           (empty strings if use_visual is False or no object_id)
+
+        ``min_pred_count`` drops predicate classes with fewer than that many
+        annotations. It was previously accepted and then never read, so
+        ``min_pred_count=50`` (the old default, and what the training script
+        passed) silently did nothing while appearing in every call site. The
+        default is now 0 so existing behaviour is unchanged and the parameter
+        no longer lies.
         """
         with open(img_path) as f:
             img_meta: List[Dict] = json.load(f)
@@ -749,24 +1098,31 @@ class VGRelationshipDataset(Dataset):
             for m in img_meta
         }
 
-        with open(rel_path) as f:
-            all_rels: List[Dict] = json.load(f)
-
         if self._build_vocab:
-            for pred in sorted(ALLOWED_PREDICATES):
+            # Scheme "v1" seeds the vocabulary from the raw allowlist. That is
+            # how the frozen E0 / E2 checkpoints were built (21 slots, of which
+            # "next to" can never be emitted — PREDICATE_MAP rewrites it to
+            # "near" first — so it is a permanently zero-support output class),
+            # and it is kept verbatim so those checkpoints stay loadable and
+            # their numbers stay reproducible. Newer schemes seed from the set
+            # the normaliser can actually emit.
+            seed_predicates = (sorted(ALLOWED_PREDICATES)
+                               if self.predicate_scheme == "v1"
+                               else reachable_predicates(self.predicate_scheme))
+            for pred in seed_predicates:
                 self.pred_vocab.add(pred)
 
         raw: List[Tuple[str, str, List[float], str, str, str]] = []
         total_raw = 0
         skipped_small = 0
 
-        for img in all_rels:
+        for img in stream_relationship_records(rel_path):
             iid = img.get("image_id")
             img_w, img_h = img_size.get(iid, (1, 1))
 
             for r in img.get("relationships", []):
                 total_raw += 1
-                pred = normalize_predicate(r.get("predicate", ""))
+                pred = self._pred_fn(r.get("predicate", ""))
                 if pred is None:
                     continue
 
@@ -795,7 +1151,7 @@ class VGRelationshipDataset(Dataset):
                     skipped_small += 1
                     continue
 
-                geo = extract_geo_features(subj_box, obj_box, img_w, img_h)
+                geo = self._geo_fn(subj_box, obj_box, img_w, img_h)
 
                 # Cache keys for visual feature lookup.
                 subj_oid = subj_d.get("object_id", -1)
@@ -813,6 +1169,14 @@ class VGRelationshipDataset(Dataset):
 
                 raw.append((subj_name, obj_name, geo, pred, subj_key, obj_key))
 
+        if min_pred_count > 0:
+            counts = Counter(r[3] for r in raw)
+            rare = {p for p, c in counts.items() if c < min_pred_count}
+            if rare:
+                raw = [r for r in raw if r[3] not in rare]
+                print(f"[VG] min_pred_count={min_pred_count} dropped "
+                      f"{len(rare)} predicate class(es): {sorted(rare)}")
+
         kept_before_cap = len(raw)
 
         if self._build_vocab:
@@ -821,6 +1185,9 @@ class VGRelationshipDataset(Dataset):
                 self.label_vocab.add(obj_name)
 
         if max_samples is not None:
+            # NOTE: this is a prefix, not a sample. relationships.json is
+            # ordered by image, so max_samples yields the first N images'
+            # relations, not a representative subset. Debug aid only.
             raw = raw[:max_samples]
 
         self._load_stats = {

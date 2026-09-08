@@ -39,6 +39,8 @@ from .vg_dataset import (
     extract_geo_features,
     normalize_label,
     GEO_DIM,
+    GEO_DIM_EXT,
+    geo_extractor,
     POSE_FEATURE_DIM,
     UNION_FEATURE_DIM,
 )
@@ -400,12 +402,18 @@ def _get_feature_group_norms(model: nn.Module) -> Dict[str, float]:
     union_dim = model.union_dim
     pose_dim = model.pose_dim
 
+    # Use the model's OWN geometry width, not the legacy 5. With a 19-dim
+    # checkpoint the constant sliced the wrong 5 columns as "geo" and shifted
+    # every later group by 14, so the reported CLIP / union / pose modality
+    # shares were read off the wrong weight columns entirely.
+    geo_dim = getattr(model, "geo_dim", GEO_DIM)
+
     groups = {
         "subj_label": (0, embed_dim),
         "obj_label":  (embed_dim, 2 * embed_dim),
-        "geo":        (2 * embed_dim, 2 * embed_dim + GEO_DIM),
+        "geo":        (2 * embed_dim, 2 * embed_dim + geo_dim),
     }
-    offset = 2 * embed_dim + GEO_DIM
+    offset = 2 * embed_dim + geo_dim
     if clip_dim > 0:
         groups["subj_clip"] = (offset, offset + clip_dim)
         offset += clip_dim
@@ -780,6 +788,9 @@ _model_clip_dim: int = 0
 _model_pose_dim: int = 0
 _model_union_dim: int = 0
 _model_type:     str = "mlp"
+_model_geo_dim:  int = GEO_DIM
+_model_geo_mode: str = "basic"
+_model_geo_fn = extract_geo_features
 
 _DEFAULT_CKPT_DIR = os.environ.get("REL_CKPT_DIR", "./checkpoints")
 
@@ -787,6 +798,7 @@ _DEFAULT_CKPT_DIR = os.environ.get("REL_CKPT_DIR", "./checkpoints")
 def load_relation_model(checkpoint_dir: str = _DEFAULT_CKPT_DIR) -> None:
     global _model, _label_vocab, _pred_vocab, _device, _model_clip_dim
     global _model_pose_dim, _model_union_dim, _model_type
+    global _model_geo_dim, _model_geo_mode, _model_geo_fn
 
     model_path = os.path.join(checkpoint_dir, "relation_mlp.pt")
     lv_path    = os.path.join(checkpoint_dir, "label_vocab.json")
@@ -822,11 +834,14 @@ def load_relation_model(checkpoint_dir: str = _DEFAULT_CKPT_DIR) -> None:
         union_dim = config.get("union_dim", 0)
         embed_dim = config.get("embed_dim", 64)
         d_model = config.get("d_model", 256)
+        geo_dim = config.get("geo_dim", GEO_DIM)
+        geo_norm = bool(config.get("geo_norm", False))
 
         _model_clip_dim = clip_dim
         _model_pose_dim = pose_dim
         _model_union_dim = union_dim
         _model_type = "transformer"
+        _set_geo_mode(config, geo_dim)
 
         _model = RelationTransformer(
             num_labels=len(_label_vocab),
@@ -836,6 +851,8 @@ def load_relation_model(checkpoint_dir: str = _DEFAULT_CKPT_DIR) -> None:
             clip_dim=clip_dim,
             pose_dim=pose_dim,
             union_dim=union_dim,
+            geo_dim=geo_dim,
+            geo_norm=geo_norm,
         )
         _model.load_state_dict(state)
         _model.to(_device)
@@ -865,11 +882,16 @@ def load_relation_model(checkpoint_dir: str = _DEFAULT_CKPT_DIR) -> None:
             clip_dim = config.get("clip_dim", 0)
             embed_dim = config.get("embed_dim", state["label_emb.weight"].shape[1])
             hidden_dims = _infer_hidden_dims(state)
+            geo_dim = config.get("geo_dim", GEO_DIM)
+            geo_norm = bool(config.get("geo_norm", "geo_norm.weight" in state))
         else:
             state = raw_data
+            config = {}
             embed_dim = state["label_emb.weight"].shape[1]
             hidden_dims = _infer_hidden_dims(state)
-            clip_dim = _infer_clip_dim(state, embed_dim)
+            geo_norm = "geo_norm.weight" in state
+            geo_dim = (int(state["geo_norm.weight"].shape[0]) if geo_norm else GEO_DIM)
+            clip_dim = _infer_clip_dim(state, embed_dim, geo_dim)
             pose_dim = 0
             union_dim = 0
 
@@ -877,6 +899,7 @@ def load_relation_model(checkpoint_dir: str = _DEFAULT_CKPT_DIR) -> None:
         _model_pose_dim = pose_dim
         _model_union_dim = union_dim
         _model_type = "mlp"
+        _set_geo_mode(config, geo_dim)
 
         _model = RelationMLP(
             num_labels=len(_label_vocab),
@@ -886,12 +909,14 @@ def load_relation_model(checkpoint_dir: str = _DEFAULT_CKPT_DIR) -> None:
             clip_dim=clip_dim,
             pose_dim=pose_dim,
             union_dim=union_dim,
+            geo_dim=geo_dim,
+            geo_norm=geo_norm,
         )
         _model.load_state_dict(state)
         _model.to(_device)
         _model.eval()
 
-        input_dim = 2 * embed_dim + GEO_DIM + 2 * clip_dim + union_dim + pose_dim
+        input_dim = 2 * embed_dim + geo_dim + 2 * clip_dim + union_dim + pose_dim
         mode_parts = []
         if clip_dim > 0:
             mode_parts.append("visual-semantic")
@@ -908,9 +933,30 @@ def load_relation_model(checkpoint_dir: str = _DEFAULT_CKPT_DIR) -> None:
         print(f"[RelationMLP]")
         print(f"  Loaded config:")
         print(f"    input_dim={input_dim}")
+        print(f"    geo_mode={_model_geo_mode} (geo_dim={geo_dim}, batchnorm={geo_norm})")
         print(f"    hidden_dims={hidden_dims}")
         print(f"    pose_dim={pose_dim}")
         print(f"    union_dim={union_dim}")
+
+
+def _set_geo_mode(config: dict, geo_dim: int) -> None:
+    """Select the geometry extractor that matches the loaded checkpoint.
+
+    A checkpoint trained on the 19-dim descriptor must be fed the 19-dim
+    descriptor at inference; feeding it the 5-dim one is a silent shape error
+    at best and a silent accuracy collapse at worst.
+    """
+    global _model_geo_dim, _model_geo_mode, _model_geo_fn
+    mode = config.get("geo_mode")
+    if mode not in ("basic", "ext"):
+        mode = "ext" if geo_dim == GEO_DIM_EXT else "basic"
+    _model_geo_fn, _model_geo_dim = geo_extractor(mode)
+    _model_geo_mode = mode
+    if _model_geo_dim != geo_dim:
+        raise ValueError(
+            f"checkpoint geo_dim={geo_dim} does not match geo_mode={mode!r} "
+            f"({_model_geo_dim}-dim). Refusing to build mismatched features."
+        )
 
 
 def _infer_hidden_dims(state: dict) -> Tuple[int, ...]:
@@ -925,14 +971,14 @@ def _infer_hidden_dims(state: dict) -> Tuple[int, ...]:
     return tuple(hidden[:-1])
 
 
-def _infer_clip_dim(state: dict, embed_dim: int) -> int:
+def _infer_clip_dim(state: dict, embed_dim: int, geo_dim: int = GEO_DIM) -> int:
     """
     Infer clip_dim from the first MLP layer's input weight shape.
-    clip_dim = (in_features - 2*embed_dim - GEO_DIM) // 2
+    clip_dim = (in_features - 2*embed_dim - geo_dim) // 2
     """
     first_weight = state["mlp.0.weight"]  # (out_features, in_features)
     in_features = first_weight.shape[1]
-    clip_portion = in_features - 2 * embed_dim - GEO_DIM
+    clip_portion = in_features - 2 * embed_dim - geo_dim
     if clip_portion <= 0:
         return 0
     # clip_portion should be 2 * clip_dim
@@ -981,6 +1027,30 @@ def _directionality_preference(candidate: Dict) -> Tuple:
 # Raw logits extraction (for Step 3 calibration + Step 8 debug)
 # ---------------------------------------------------------------------------
 
+def _resolve_image_size(
+    img_w: float,
+    img_h: float,
+    image: Optional[Image.Image] = None,
+) -> Tuple[float, float]:
+    """Return the image size used to normalise the geometry features.
+
+    ``extract_geo_features`` divides the subject/object centre offsets by the
+    image width/height. Training always passes the real VG image size, so dx/dy
+    live in roughly [-1, 1]. Every caller in this repository used to fall back
+    on the ``img_w=img_h=1.0`` defaults, which turned dx/dy into RAW PIXEL
+    offsets (order 1e2-1e3) at inference time — a ~1000x train/inference
+    distribution shift on two of the five geometry inputs.
+
+    When the caller did not supply a real size we recover it from the PIL image
+    it already passes in. An explicit size > 1 is always respected.
+    """
+    if img_w > 1.0 and img_h > 1.0:
+        return float(img_w), float(img_h)
+    if image is not None:
+        return float(image.width), float(image.height)
+    return float(max(img_w, 1.0)), float(max(img_h, 1.0))
+
+
 def _get_raw_logits(
     subject: str,
     obj_label: str,
@@ -1011,7 +1081,8 @@ def _get_raw_logits(
 
     subj_box = (float(box1[0]), float(box1[1]), float(box1[2]), float(box1[3]))
     obj_box  = (float(box2[0]), float(box2[1]), float(box2[2]), float(box2[3]))
-    geo      = extract_geo_features(subj_box, obj_box, img_w, img_h)
+    img_w, img_h = _resolve_image_size(img_w, img_h, image)
+    geo      = _model_geo_fn(subj_box, obj_box, img_w, img_h)
 
     with torch.no_grad():
         s = torch.tensor([subj_idx], dtype=torch.long,    device=_device)
@@ -1085,7 +1156,8 @@ def predict_relation(
 
     subj_box = (float(box1[0]), float(box1[1]), float(box1[2]), float(box1[3]))
     obj_box  = (float(box2[0]), float(box2[1]), float(box2[2]), float(box2[3]))
-    geo      = extract_geo_features(subj_box, obj_box, img_w, img_h)
+    img_w, img_h = _resolve_image_size(img_w, img_h, image)
+    geo      = _model_geo_fn(subj_box, obj_box, img_w, img_h)
 
     with torch.no_grad():
         s = torch.tensor([subj_idx], dtype=torch.long,    device=_device)
@@ -1160,7 +1232,8 @@ def predict_relation_topk(
 
     subj_idx = _label_vocab[subj_norm]
     obj_idx  = _label_vocab[obj_norm]
-    geo = extract_geo_features(
+    img_w, img_h = _resolve_image_size(img_w, img_h, image)
+    geo = _model_geo_fn(
         (float(box1[0]), float(box1[1]), float(box1[2]), float(box1[3])),
         (float(box2[0]), float(box2[1]), float(box2[2]), float(box2[3])),
         img_w, img_h,
@@ -2063,7 +2136,7 @@ def infer_relationships_semantic(
                         attn_contribs = _model.get_feature_contributions(
                             torch.tensor([0], device=_device),
                             torch.tensor([0], device=_device),
-                            torch.zeros((1, GEO_DIM), device=_device),
+                            torch.zeros((1, _model_geo_dim), device=_device),
                         )
                         if attn_contribs:
                             total_attn = sum(attn_contribs.values()) or 1.0

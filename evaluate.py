@@ -273,6 +273,26 @@ def run_relations(
     return infer_relationships_learned(detections, image=image)
 
 
+def run_relations_structured(
+    detections: List[Dict],
+    image: Image.Image,
+) -> List[Dict]:
+    """Relations as dicts WITH confidences, for evidence-conditioned captioning.
+
+    ``run_relations`` returns bare (subject, predicate, object) tuples, which
+    throws away the confidence the caption prefix needs to decide what is safe
+    to inject.
+    """
+    if not _check_relation_model():
+        print("[evaluate] WARNING: relation_mlp.pt not found - skipping relation prediction")
+        return []
+    from relation_prediction.predict import infer_relationships_semantic
+    relations, _debug = infer_relationships_semantic(
+        detections, image=image, debug=False,
+    )
+    return relations
+
+
 # ---------------------------------------------------------------------------
 # System runners
 # ---------------------------------------------------------------------------
@@ -335,12 +355,25 @@ def run_system_grounded(
     image: Image.Image,
     detections: List[Dict],
 ) -> Tuple[str, List[Tuple[str, str, str]]]:
-    """Full grounded pipeline — YOLO + CLIP verification + MLP relations + BLIP-2."""
+    """Full grounded pipeline — YOLO + CLIP verification + relations + BLIP.
+
+    This used to call ``run_blip2`` -> ``generate_blip_caption``, which
+    generated from the constant prefix "a photo of" and never looked at the
+    relations at all: the "grounded" caption was the ungrounded baseline plus
+    post-hoc gating, so the relation model contributed nothing measurable to
+    the caption comparison. It now goes through the evidence-conditioned
+    semantic path (prefix conditioning -> relation correction -> gating).
+    """
     from utils.detection_verifier import verify_detections
+    from utils.blip_captioner import generate_blip_semantic_caption
+
     detections = verify_detections(detections, image, debug=False)
-    relations = run_relations(detections, image)
-    caption = run_blip2(image, detections, relations)
-    return caption, relations
+    relations = run_relations_structured(detections, image)
+    _raw, caption, _prompt, _verbalized = generate_blip_semantic_caption(
+        image, detections, relations,
+    )
+    triples = [(r["subject"], r["predicate"], r["object"]) for r in relations]
+    return caption, triples
 
 
 # ---------------------------------------------------------------------------

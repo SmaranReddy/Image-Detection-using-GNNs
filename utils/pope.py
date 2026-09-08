@@ -33,6 +33,14 @@ from typing import Dict, Set
 
 from utils.metrics import COCO_80, detect_coco_objects
 
+# Fixed number of negative probes per image. Must NOT depend on the caption:
+# see the note in compute_pope. Every negative probe is a true negative by
+# construction, so this constant only sets how much TN padding enters
+# pope_accuracy — it is identical for every system, which is what makes the
+# accuracies comparable. pope_precision / recall / f1 do not use TN at all and
+# are the metrics to report.
+NUM_NEGATIVE_PROBES = 10
+
 
 def compute_pope(
     candidate: str,
@@ -73,25 +81,31 @@ def compute_pope(
     fn = len(fn_set)
 
     # -- Negative probes --------------------------------------------------
-    # Balanced sampling: ~equal to positive probes, minimum 10.
-    # Pool = objects neither mentioned by caption NOR present in GT.
+    # Pool = objects neither mentioned by the caption NOR present in GT, so
+    # every negative probe is a true negative by construction.
+    #
+    # The count is FIXED (NUM_NEGATIVE_PROBES) and must not depend on the
+    # caption. It used to be `max(10, len(mentioned))`, which made a caption
+    # that names more objects earn more free true negatives; since TN enters
+    # pope_accuracy, a system whose captions are simply longer scored higher
+    # at identical correctness. The grounded system's captions ARE longer than
+    # the baseline's (the injected relation prefix adds object mentions), so
+    # that bias ran in exactly the direction of the result being claimed.
+    #
+    # `num_positives` was also only bound inside the `if negative_pool:`
+    # branch while being read unconditionally at the return, so an empty pool
+    # raised NameError instead of returning a result.
+    num_positives = len(mentioned)
     negative_pool = sorted(COCO_80 - mentioned - gt_objects)
+    num_negatives = min(len(negative_pool), NUM_NEGATIVE_PROBES)
 
-    if negative_pool:
-        num_positives = len(mentioned)
-        target_negatives = max(10, num_positives)
-        num_negatives = min(len(negative_pool), target_negatives)
-        num_negatives = max(1, num_negatives)
-
+    if num_negatives:
         rng = random.Random(seed)
         rng.shuffle(negative_pool)
         negative_probes = set(negative_pool[:num_negatives])
     else:
         negative_probes = set()
-        num_negatives = 0
 
-    # All negative probes are TN by construction
-    # (verified they are not in gt_objects).
     tn = len(negative_probes)
 
     # -- Metrics ----------------------------------------------------------

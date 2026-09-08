@@ -42,7 +42,10 @@ sys.path.insert(0, str(PROJ_ROOT))
 
 from relation_prediction.model import RelationMLP
 from relation_prediction.relation_transformer import RelationTransformer
-from relation_prediction.vg_dataset import VGRelationshipDataset, Vocab, GEO_DIM, POSE_FEATURE_DIM, UNION_FEATURE_DIM
+from relation_prediction.vg_dataset import (
+    VGRelationshipDataset, Vocab, GEO_DIM, GEO_DIM_EXT,
+    POSE_FEATURE_DIM, UNION_FEATURE_DIM, geo_extractor,
+)
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -61,15 +64,24 @@ VAL_FRACTION = 0.1
 EMBED_DIM = 64
 HIDDEN_DIMS = (256, 128)
 DROPOUT = 0.3
-MIN_PRED_COUNT = 50
+MIN_PRED_COUNT = 0       # 0 = keep every predicate class (was a silent no-op at 50)
 MAX_SAMPLES = None
 SEED = 42
 USE_VISUAL = True
 REQUIRE_VISUAL = False
+VISUAL_FILTER_ONLY = False  # load the CLIP cache to fix the sample population,
+                            # but give the model clip_dim=0 (geometry control)
 USE_POSE = False
 USE_UNION = False
 MODEL_TYPE = "mlp"
 SPLIT_MANIFEST = None   # path to a frozen image-disjoint split manifest (E0 protocol)
+GEO_MODE = "basic"      # "basic" = 5-dim legacy geometry, "ext" = 19-dim extended
+PREDICATE_SCHEME = "v1" # "v1" = frozen E0 normaliser, "v2" = surface-form normaliser
+GEO_NORM = False        # standardise the geometry block with BatchNorm1d
+LOSS = "focal"          # "ce" (plain cross-entropy) or "focal"
+CLASS_WEIGHT_ALPHA = None  # None = legacy effective-number weights; float = 1/count**alpha
+SELECT_METRIC = "top1"  # checkpoint selection metric: "top1" or "macro_f1"
+D_MODEL = 256
 
 SEMANTIC_PREDICATES = frozenset({
     "riding", "carrying", "holding", "wearing", "sitting on", "standing on",
@@ -110,10 +122,17 @@ def _collate(batch):
         if len(item) > idx:
             subj_feats.append(item[idx]); obj_feats.append(item[idx + 1])
             idx += 2
-            if len(item) > idx:
-                union_feats.append(item[idx]); idx += 1
-            if len(item) > idx:
-                pose_feats.append(item[idx]); idx += 1
+            # The dataset appends union BEFORE pose, but only for the modes it
+            # was asked for. Distinguishing them by position alone is wrong when
+            # only ONE of the two is enabled (pose-only used to be collated into
+            # the union slot), so dispatch on the tensor width instead.
+            while len(item) > idx:
+                feat = item[idx]
+                if feat.shape[-1] == POSE_FEATURE_DIM and UNION_FEATURE_DIM != POSE_FEATURE_DIM:
+                    pose_feats.append(feat)
+                else:
+                    union_feats.append(feat)
+                idx += 1
     result = (
         torch.stack(subj_idxs),
         torch.stack(obj_idxs),
@@ -127,6 +146,42 @@ def _collate(batch):
     if pose_feats:
         result = result + (torch.stack(pose_feats),)
     return result
+
+
+_VALID_IDX_CACHE = {}
+
+
+def _valid_predicate_indices(pred_vocab, device):
+    """Vocabulary indices of real predicates (PAD/UNK excluded), on `device`."""
+    key = (len(pred_vocab), str(device))
+    cached = _VALID_IDX_CACHE.get(key)
+    if cached is None:
+        idxs = [i for i in range(len(pred_vocab))
+                if pred_vocab.token(i) not in (Vocab.PAD, Vocab.UNK)]
+        cached = torch.tensor(idxs, dtype=torch.long, device=device)
+        _VALID_IDX_CACHE[key] = cached
+    return cached
+
+
+def macro_f1_from_metrics(metrics, preds, targets, pred_vocab):
+    """Macro-F1 over predicates with support > 0 — the E0 definition."""
+    preds = preds.numpy() if hasattr(preds, "numpy") else preds
+    targets = targets.numpy() if hasattr(targets, "numpy") else targets
+    f1s = []
+    for i in range(len(pred_vocab)):
+        token = pred_vocab.token(i)
+        if token in (Vocab.PAD, Vocab.UNK):
+            continue
+        support = int((targets == i).sum())
+        if support == 0:
+            continue
+        tp = int(((preds == i) & (targets == i)).sum())
+        predicted = int((preds == i).sum())
+        precision = tp / predicted if predicted else 0.0
+        recall = tp / support
+        f1s.append(2 * precision * recall / (precision + recall)
+                   if (precision + recall) > 0 else 0.0)
+    return sum(f1s) / len(f1s) if f1s else 0.0
 
 
 def compute_predicate_metrics(model, loader, device, pred_vocab, has_visual,
@@ -158,7 +213,12 @@ def compute_predicate_metrics(model, loader, device, pred_vocab, has_visual,
                            subj_feat=subj_feat, obj_feat=obj_feat,
                            union_feat=union_feat, pose_feat=pose_feat)
 
-            preds = logits.argmax(dim=-1)
+            # Restrict the candidate set to real predicates, exactly as the
+            # frozen E0 test protocol does, so validation numbers reported here
+            # are on the same footing as the numbers eval_gt_relations.py
+            # produces. PAD/UNK are vocabulary slots, not classes.
+            valid = _valid_predicate_indices(pred_vocab, logits.device)
+            preds = valid[logits.index_select(1, valid).argmax(dim=-1)]
             all_preds.append(preds.cpu())
             all_targets.append(target.cpu())
 
@@ -223,14 +283,33 @@ def print_confusion_analysis(confusion_counts, pred_vocab, top_n=10):
         print(f"  {token:<20} {count:>8}")
 
 
-def qualitative_test(model, label_vocab, pred_vocab, device, has_visual, top_k=5):
+def qualitative_test(model, label_vocab, pred_vocab, device, has_visual, top_k=5,
+                     geo_mode="basic"):
+    """Probe the model on canonical subject/object layouts.
+
+    The geometry probe is built from actual boxes through the dataset's own
+    extractor rather than being hard-coded, so it stays correct for any
+    geo_mode (the old literal 5-element vectors crashed a 19-dim model), and
+    the zero visual features are sized from the model rather than assumed 768.
+    """
     print(f"\n  Qualitative Relation Predictions (top-{top_k}):")
     print(f"  {'Subject':<12} {'Object':<14} {'Predictions':<60}")
     print(f"  {'-'*12} {'-'*14} {'-'*60}")
 
-    geo_default = torch.tensor([[0.0, -0.1, 0.0, 0.0, 0.3]], dtype=torch.float32, device=device)
-    geo_above = torch.tensor([[0.0, -0.5, 0.0, 0.0, 0.0]], dtype=torch.float32, device=device)
-    geo_on = torch.tensor([[0.0, 0.05, 0.0, 0.0, 0.4]], dtype=torch.float32, device=device)
+    geo_fn, _ = geo_extractor(geo_mode)
+    # Subject and object of similar size, object slightly above and overlapping
+    # the subject — a neutral "interacting" layout on a 640x480 frame.
+    probe_img_w, probe_img_h = 640.0, 480.0
+    subj_box = (220.0, 180.0, 380.0, 420.0)
+    obj_box = (240.0, 140.0, 400.0, 380.0)
+    geo_default = torch.tensor(
+        [geo_fn(subj_box, obj_box, probe_img_w, probe_img_h)],
+        dtype=torch.float32, device=device,
+    )
+
+    clip_dim = getattr(model, "clip_dim", 0)
+    union_dim = getattr(model, "union_dim", 0)
+    pose_dim = getattr(model, "pose_dim", 0)
 
     model.eval()
     with torch.no_grad():
@@ -240,14 +319,16 @@ def qualitative_test(model, label_vocab, pred_vocab, device, has_visual, top_k=5
             s_t = torch.tensor([s_idx], dtype=torch.long, device=device)
             o_t = torch.tensor([o_idx], dtype=torch.long, device=device)
 
-            sf = torch.zeros((1, 768), device=device)
-            of = torch.zeros((1, 768), device=device)
-            geo_t = geo_default
+            kwargs = {}
+            if has_visual and clip_dim:
+                kwargs["subj_feat"] = torch.zeros((1, clip_dim), device=device)
+                kwargs["obj_feat"] = torch.zeros((1, clip_dim), device=device)
+            if union_dim:
+                kwargs["union_feat"] = torch.zeros((1, union_dim), device=device)
+            if pose_dim:
+                kwargs["pose_feat"] = torch.zeros((1, pose_dim), device=device)
 
-            if has_visual:
-                logits = model(s_t, o_t, geo_t, sf, of)
-            else:
-                logits = model(s_t, o_t, geo_t)
+            logits = model(s_t, o_t, geo_default, **kwargs)
 
             probs = F.softmax(logits, dim=-1)
             top_probs, top_idxs = probs[0].topk(top_k)
@@ -433,6 +514,8 @@ def main():
         mode_parts.append("VISUAL-SEMANTIC (mixed/fallback)")
     else:
         mode_parts.append("GEOMETRY-ONLY")
+    if VISUAL_FILTER_ONLY:
+        mode_parts.append("clip cache used for FILTERING ONLY (clip_dim=0)")
     if USE_POSE:
         mode_parts.append("pose")
     if USE_UNION:
@@ -452,6 +535,8 @@ def main():
         require_visual=REQUIRE_VISUAL,
         use_pose=USE_POSE,
         use_union=USE_UNION,
+        geo_mode=GEO_MODE,
+        predicate_scheme=PREDICATE_SCHEME,
     )
     load_time = time.time() - t0
 
@@ -461,7 +546,14 @@ def main():
     dataset_size = len(full_ds)
     num_labels = len(label_vocab)
     num_predicates = len(pred_vocab)
-    clip_dim = full_ds.CLIP_DIM if USE_VISUAL else 0
+    # VISUAL_FILTER_ONLY is what makes the four-way feature ablation a valid
+    # comparison. Turning visual features on changes the sample population
+    # (require_visual drops pairs whose crops are missing or degenerate), so a
+    # geometry run with use_visual=False would be scored on a DIFFERENT and
+    # larger test set than the CLIP runs — the variants would differ in two
+    # ways at once. With this flag the control loads the same cache and keeps
+    # the same samples, and only the model's input width changes.
+    clip_dim = 0 if VISUAL_FILTER_ONLY else (full_ds.CLIP_DIM if USE_VISUAL else 0)
     pose_dim = POSE_FEATURE_DIM if USE_POSE else 0
     union_dim = UNION_FEATURE_DIM if USE_UNION else 0
 
@@ -478,6 +570,7 @@ def main():
     print(f"  Require visual:            {REQUIRE_VISUAL}")
     print(f"  Use pose:                  {USE_POSE}")
     print(f"  Use union:                 {USE_UNION}")
+    print(f"  Visual filter only:        {VISUAL_FILTER_ONLY}")
 
     # Pre-training validation: verify no zero embeddings in pure visual mode
     if REQUIRE_VISUAL and USE_VISUAL:
@@ -485,17 +578,21 @@ def main():
     elif USE_VISUAL and not REQUIRE_VISUAL:
         real_clip, zero_clip, clip_coverage = analyze_clip_coverage(full_ds)
 
-    input_dim = 2 * EMBED_DIM + GEO_DIM + 2 * clip_dim + union_dim + pose_dim
+    geo_dim = full_ds.geo_dim
+    input_dim = 2 * EMBED_DIM + geo_dim + 2 * clip_dim + union_dim + pose_dim
 
     if MODEL_TYPE == "transformer":
         model = RelationTransformer(
             num_labels=num_labels,
             num_predicates=num_predicates,
+            d_model=D_MODEL,
             embed_dim=EMBED_DIM,
             clip_dim=clip_dim,
             pose_dim=pose_dim,
             union_dim=union_dim,
-            dropout=DROPOUT if DROPOUT < 0.3 else 0.1,
+            geo_dim=geo_dim,
+            geo_norm=GEO_NORM,
+            dropout=DROPOUT,
         ).to(device)
     else:
         model = RelationMLP(
@@ -507,6 +604,8 @@ def main():
             clip_dim=clip_dim,
             pose_dim=pose_dim,
             union_dim=union_dim,
+            geo_dim=geo_dim,
+            geo_norm=GEO_NORM,
         ).to(device)
 
     param_count = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -517,6 +616,12 @@ def main():
     print(f"  Embedding dimension:      {EMBED_DIM}")
     print(f"  Hidden dims:              {HIDDEN_DIMS if MODEL_TYPE == 'mlp' else 'N/A'}")
     print(f"  Dropout:                  {DROPOUT}")
+    print(f"  Geometry mode:            {GEO_MODE} ({geo_dim}-dim)")
+    print(f"  Predicate scheme:         {PREDICATE_SCHEME}")
+    print(f"  Geometry BatchNorm:       {GEO_NORM}")
+    print(f"  Loss:                     {LOSS}")
+    print(f"  Class-weight alpha:       {CLASS_WEIGHT_ALPHA}")
+    print(f"  Selection metric:         {SELECT_METRIC}")
     print(f"  Parameters:               {param_count:,}")
     print(f"  Batch size:               {BATCH_SIZE}")
     print(f"  Epochs:                   {EPOCHS}")
@@ -536,6 +641,8 @@ def main():
         # regenerated. Test image IDs are excluded entirely.
         train_ds, val_ds, _split_info = split_by_manifest(full_ds, SPLIT_MANIFEST)
     else:
+        _split_info = {"manifest_path": None,
+                       "note": "sample-level random_split (image-leaking)"}
         # Legacy behaviour: sample-level random split (image-leaking).
         n_val = max(1, int(dataset_size * VAL_FRACTION))
         n_train = dataset_size - n_val
@@ -563,21 +670,48 @@ def main():
     print("  STEP 3 — TRAINING VISUAL-SEMANTIC MLP")
     print(f"{'=' * 78}")
 
-    pred_counter = full_ds._load_stats['pred_counter']
-    class_weights = compute_class_weights(pred_counter, pred_vocab, num_predicates)
-    print(f"\n  Class weights (effective-number, beta=0.999):")
+    # Class statistics must come from the TRAIN SPLIT, not from the whole
+    # pre-filter corpus: with a frozen image-disjoint manifest the two differ,
+    # and weighting a loss by counts the model never sees is simply wrong.
+    train_pred_counter = Counter()
+    for i in getattr(train_ds, "indices", range(len(full_ds))):
+        train_pred_counter[pred_vocab.token(int(full_ds.samples[i][3]))] += 1
+
+    if CLASS_WEIGHT_ALPHA is None:
+        class_weights = compute_class_weights(train_pred_counter, pred_vocab, num_predicates)
+        weight_desc = "effective-number, beta=0.999"
+    elif CLASS_WEIGHT_ALPHA == 0.0:
+        class_weights = None
+        weight_desc = "none (unweighted)"
+    else:
+        class_weights = compute_inverse_frequency_weights(
+            train_pred_counter, pred_vocab, num_predicates, alpha=CLASS_WEIGHT_ALPHA,
+        )
+        weight_desc = f"inverse-frequency ** {CLASS_WEIGHT_ALPHA}"
+
+    print(f"\n  Train-split predicate counts, class weights ({weight_desc}):")
     for i in range(num_predicates):
         tok = pred_vocab.token(i)
-        if tok not in (Vocab.PAD, Vocab.UNK):
-            print(f"    {tok:<15} count={pred_counter.get(tok, 0):<8} weight={class_weights[i].item():.4f}")
+        if tok in (Vocab.PAD, Vocab.UNK):
+            continue
+        w = class_weights[i].item() if class_weights is not None else 1.0
+        print(f"    {tok:<15} count={train_pred_counter.get(tok, 0):<8} weight={w:.4f}")
 
-    criterion = FocalLoss(gamma=2.0, alpha=class_weights.to(device), ignore_index=0)
+    alpha_t = class_weights.to(device) if class_weights is not None else None
+    if LOSS == "focal":
+        criterion = FocalLoss(gamma=2.0, alpha=alpha_t, ignore_index=0)
+    elif LOSS == "ce":
+        criterion = nn.CrossEntropyLoss(weight=alpha_t, ignore_index=0)
+    else:
+        raise SystemExit(f"[train] unknown --loss {LOSS!r}")
     optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS)
     CLF_L2_WEIGHT = 1e-4
 
     os.makedirs(str(CHECKPOINT_DIR), exist_ok=True)
     best_val_acc = 0.0
+    best_select_score = -1.0
+    best_epoch = 0
     has_visual = USE_VISUAL
     has_union = USE_UNION
     has_pose = USE_POSE
@@ -643,12 +777,17 @@ def main():
         overall_val_correct = sum(m["correct"] for m in val_metrics.values())
         overall_val_total = sum(m["total"] for m in val_metrics.values())
         val_acc = overall_val_correct / max(overall_val_total, 1)
+        val_macro_f1 = macro_f1_from_metrics(
+            val_metrics, val_preds, val_targets, pred_vocab,
+        )
+        select_score = val_macro_f1 if SELECT_METRIC == "macro_f1" else val_acc
 
         epoch_log = {
             "epoch": epoch,
             "train_loss": round(avg_loss, 4),
             "train_acc": round(train_acc, 4),
             "val_acc": round(val_acc, 4),
+            "val_macro_f1": round(val_macro_f1, 4),
             "lr": scheduler.get_last_lr()[0],
         }
         epoch_metrics_log.append(epoch_log)
@@ -656,7 +795,7 @@ def main():
         print(f"\n  Epoch {epoch:3d}/{EPOCHS} | "
               f"loss {avg_loss:.4f} | "
               f"train {train_acc:.3f} | "
-              f"val {val_acc:.3f} | "
+              f"val {val_acc:.3f} | mF1 {val_macro_f1:.3f} | "
               f"lr {scheduler.get_last_lr()[0]:.2e} | "
               f"{epoch_time:.1f}s")
 
@@ -667,12 +806,15 @@ def main():
             marker = " ***" if m["total"] > 0 else ""
             print(f"    {sp:<15} acc={m['accuracy']:.3f}  ({m['correct']}/{m['total']}){marker}")
 
-        if val_acc > best_val_acc:
+        if select_score > best_select_score:
+            best_select_score = select_score
             best_val_acc = val_acc
             best_epoch = epoch
             _save_checkpoint(model, label_vocab, pred_vocab, str(CHECKPOINT_DIR), epoch, val_acc,
-                             dataset=full_ds, mode_label=mode_label)
-            print(f"  >>> New best model saved (val_acc={val_acc:.3f}, epoch={epoch})")
+                             dataset=full_ds, mode_label=mode_label,
+                             val_macro_f1=val_macro_f1, split_info=_split_info)
+            print(f"  >>> New best model saved ({SELECT_METRIC}={select_score:.4f}, "
+                  f"val_acc={val_acc:.3f}, val_macro_f1={val_macro_f1:.3f}, epoch={epoch})")
 
     # -----------------------------------------------------------------------
     # STEP 4 - Training Complete
@@ -704,7 +846,8 @@ def main():
     print("  STEP 6 — QUALITATIVE RELATION TESTS")
     print(f"{'=' * 78}")
 
-    qualitative_test(model, label_vocab, pred_vocab, device, has_visual, top_k=5)
+    qualitative_test(model, label_vocab, pred_vocab, device, has_visual, top_k=5,
+                     geo_mode=GEO_MODE)
 
     # -----------------------------------------------------------------------
     # STEP 7 - CLIP Analysis
@@ -713,7 +856,12 @@ def main():
     print("  STEP 7 — CLIP IMPACT ANALYSIS")
     print(f"{'=' * 78}")
 
-    analyze_clip_impact(best_metrics, full_ds)
+    # Only meaningful when the model actually consumed CLIP. Called
+    # unconditionally, this section asserted "CLIP features ARE contributing"
+    # in runs built with clip_dim=0, which is a claim about a feature the model
+    # never saw.
+    if getattr(model, "clip_dim", 0) > 0:
+        analyze_clip_impact(best_metrics, full_ds)
 
     # -----------------------------------------------------------------------
     # STEP 8 - Save Artifacts
@@ -806,7 +954,9 @@ def _validate_pure_visual(dataset: VGRelationshipDataset) -> None:
 # Checkpoint Helpers
 # ---------------------------------------------------------------------------
 
-def _save_checkpoint(model, label_vocab, pred_vocab, ckpt_dir, epoch, val_acc, dataset=None, mode_label="unknown"):
+def _save_checkpoint(model, label_vocab, pred_vocab, ckpt_dir, epoch, val_acc,
+                     dataset=None, mode_label="unknown", val_macro_f1=None,
+                     split_info=None):
     state = model.state_dict()
     model_type = "transformer" if isinstance(model, RelationTransformer) else "mlp"
 
@@ -823,6 +973,7 @@ def _save_checkpoint(model, label_vocab, pred_vocab, ckpt_dir, epoch, val_acc, d
         }
     else:
         config = {
+            "model_type": "mlp",
             "num_labels": model.label_emb.num_embeddings,
             "num_predicates": model.mlp[-1].out_features,
             "embed_dim": model.label_emb.embedding_dim,
@@ -830,11 +981,41 @@ def _save_checkpoint(model, label_vocab, pred_vocab, ckpt_dir, epoch, val_acc, d
             "pose_dim": model.pose_dim,
             "union_dim": model.union_dim,
         }
+        # RelationMLP lays its layers out as Linear/ReLU/Dropout triples, so the
+        # Linear weights are mlp.0, mlp.3, mlp.6, ... and hidden_dims is the
+        # out_features of every Linear EXCEPT the final classifier.
+        #
+        # The previous version skipped "mlp.0.weight" and kept everything else,
+        # which dropped the first hidden width and kept the output width: a
+        # (256, 128) model was recorded as hidden_dims=[128, 21]. Every
+        # checkpoint written by this script carries that wrong value. Nothing
+        # currently reads it back (predict.py and eval_gt_relations.py both
+        # re-derive the widths from the weights via _infer_hidden_dims), so no
+        # published number is affected — but model_config was not describing
+        # the model, and rebuilding from it raised a shape error.
         hdims = []
-        for k in state:
-            if k.startswith("mlp.") and k.endswith(".weight") and k != "mlp.0.weight":
-                hdims.append(state[k].shape[0])
-        config["hidden_dims"] = hdims
+        idx = 0
+        while f"mlp.{idx}.weight" in state:
+            hdims.append(int(state[f"mlp.{idx}.weight"].shape[0]))
+            idx += 3
+        config["hidden_dims"] = hdims[:-1]
+
+    # Geometry descriptor width and normalisation are part of the model
+    # signature: without them a 19-dim checkpoint silently mismatches a 5-dim
+    # feature builder at load time.
+    config["geo_dim"] = getattr(model, "geo_dim", GEO_DIM)
+    config["geo_norm"] = getattr(model, "geo_norm", None) is not None
+    config["geo_mode"] = GEO_MODE
+    config["predicate_scheme"] = PREDICATE_SCHEME
+    # The evaluator decides whether to restrict the test set to the
+    # visual-complete population from the model_config alone, so the geometry
+    # control has to advertise that it was trained on the filtered population
+    # even though its clip_dim is 0. Without this it would be scored on all
+    # 10,227 test pairs while the CLIP variants are scored on the subset, and
+    # the ablation would be comparing two different test sets.
+    config["visual_filter_only"] = VISUAL_FILTER_ONLY
+    config["require_visual"] = REQUIRE_VISUAL
+
     torch.save({"model_state_dict": state, "model_config": config},
                os.path.join(ckpt_dir, "relation_mlp.pt"))
     label_vocab.save(os.path.join(ckpt_dir, "label_vocab.json"))
@@ -848,6 +1029,7 @@ def _save_checkpoint(model, label_vocab, pred_vocab, ckpt_dir, epoch, val_acc, d
         "model_type": model_type,
         "use_visual": USE_VISUAL,
         "require_visual": REQUIRE_VISUAL,
+        "visual_filter_only": VISUAL_FILTER_ONLY,
         "use_pose": USE_POSE,
         "use_union": USE_UNION,
         "batch_size": BATCH_SIZE,
@@ -857,6 +1039,21 @@ def _save_checkpoint(model, label_vocab, pred_vocab, ckpt_dir, epoch, val_acc, d
         "d_model": model.d_model if model_type == "transformer" else None,
         "dropout": DROPOUT,
         "seed": SEED,
+        "geo_mode": GEO_MODE,
+        "predicate_scheme": PREDICATE_SCHEME,
+        "geo_dim": config["geo_dim"],
+        "geo_norm": config["geo_norm"],
+        "loss": LOSS,
+        "class_weight_alpha": CLASS_WEIGHT_ALPHA,
+        "select_metric": SELECT_METRIC,
+        "weight_decay": WEIGHT_DECAY,
+        "epochs": EPOCHS,
+        "val_macro_f1": val_macro_f1,
+        "split": split_info,
+        "val_acc_note": (
+            "Validation numbers are NOT comparable to the frozen E0 test "
+            "numbers. Report test metrics from eval_gt_relations.py."
+        ),
     }
     if dataset is not None:
         meta["dataset_size"] = len(dataset)
@@ -870,11 +1067,13 @@ def _save_checkpoint(model, label_vocab, pred_vocab, ckpt_dir, epoch, val_acc, d
             meta["real_clip_samples"] = real
             meta["total_samples"] = total
         meta["retained_sample_count"] = len(dataset)
-        # Predicate distribution
-        pred_counter = Counter()
-        for idx in range(len(dataset)):
-            pred_name = dataset.pred_vocab.token(dataset[idx][3].item())
-            pred_counter[pred_name] += 1
+        # Predicate distribution. Read the raw sample tuples rather than calling
+        # dataset[idx], which materialises (and clones) the CLIP tensors for
+        # every sample — that ran on every new-best epoch and dominated the
+        # checkpoint-saving cost in visual mode.
+        pred_counter = Counter(
+            dataset.pred_vocab.token(int(sample[3])) for sample in dataset.samples
+        )
         meta["predicate_distribution"] = dict(pred_counter.most_common())
 
     with open(os.path.join(ckpt_dir, "training_meta.json"), "w") as f:
@@ -882,11 +1081,22 @@ def _save_checkpoint(model, label_vocab, pred_vocab, ckpt_dir, epoch, val_acc, d
 
 
 def _load_best_model(model, ckpt_dir, device):
+    """Reload the best checkpoint written by _save_checkpoint.
+
+    _save_checkpoint writes {"model_state_dict": ..., "model_config": ...}, but
+    this helper used to hand that whole wrapper dict to load_state_dict(), which
+    raises on the unexpected "model_config" key and aborted the run before the
+    post-training analysis and artifact-saving steps. Unwrap it, and keep
+    accepting a bare state_dict for older checkpoints.
+    """
     ckpt_path = os.path.join(ckpt_dir, "relation_mlp.pt")
-    if os.path.exists(ckpt_path):
-        state = torch.load(ckpt_path, map_location=device, weights_only=True)
-        model.load_state_dict(state)
-        model.eval()
+    if not os.path.exists(ckpt_path):
+        print(f"  [warn] no checkpoint at {ckpt_path}; keeping in-memory weights")
+        return
+    raw = torch.load(ckpt_path, map_location=device, weights_only=True)
+    state = raw["model_state_dict"] if isinstance(raw, dict) and "model_state_dict" in raw else raw
+    model.load_state_dict(state)
+    model.eval()
 
 
 def _save_training_logs(epoch_logs, ckpt_dir):
@@ -978,6 +1188,21 @@ def generate_final_report(
     model, best_metrics, val_loader, device, pred_vocab, has_visual, label_vocab,
     all_batch_times, dataset_size, epochs, best_val_acc, best_epoch,
 ):
+    # Read the feature configuration off the model rather than restating it:
+    # this block used to print a hardcoded "visual-semantic (1669-dim input)"
+    # no matter how the run was configured.
+    clip_dim = int(getattr(model, "clip_dim", 0) or 0)
+    union_dim = int(getattr(model, "union_dim", 0) or 0)
+    pose_dim = int(getattr(model, "pose_dim", 0) or 0)
+    geo_dim = int(getattr(model, "geo_dim", 0) or 0)
+    in_dim = (model.mlp[0].weight.shape[1] if hasattr(model, "mlp")
+              else 2 * EMBED_DIM + geo_dim + 2 * clip_dim + union_dim + pose_dim)
+    mode = "+".join(["labels"]
+                    + (["geo"] if geo_dim else [])
+                    + (["clip"] if clip_dim else [])
+                    + (["union"] if union_dim else [])
+                    + (["pose"] if pose_dim else []))
+
     avg_batch_time = sum(all_batch_times) / max(len(all_batch_times), 1)
     samples_per_sec = BATCH_SIZE / max(avg_batch_time, 1e-6)
     total_train_time = sum(all_batch_times)
@@ -1026,7 +1251,8 @@ def generate_final_report(
         print(f"       {token:<20} acc={m['accuracy']:.3f} ({m['correct']}/{m['total']})")
 
     print(f"\n  6. Qualitative Prediction Examples:")
-    qualitative_test(model, label_vocab, pred_vocab, device, has_visual, top_k=3)
+    qualitative_test(model, label_vocab, pred_vocab, device, has_visual, top_k=3,
+                     geo_mode=GEO_MODE)
 
     print(f"\n  7. Honest Assessment of Relation Quality:")
     sem_preds = {"riding", "carrying", "holding", "wearing", "sitting on", "standing on"}
@@ -1041,23 +1267,28 @@ def generate_final_report(
     spa_correct = sum(m["correct"] for m in spa_metrics.values())
     spa_acc = spa_correct / max(spa_total, 1)
 
-    print(f"     Semantic predicates (CLIP-sensitive):        acc={sem_acc:.3f} ({sem_correct}/{sem_total})")
-    print(f"     Spatial predicates (geometry-dominated):     acc={spa_acc:.3f} ({spa_correct}/{spa_total})")
+    print(f"     Semantic predicates:                         acc={sem_acc:.3f} ({sem_correct}/{sem_total})")
+    print(f"     Spatial predicates:                          acc={spa_acc:.3f} ({spa_correct}/{spa_total})")
     print(f"     Overall:                                     acc={overall_correct / max(overall_total, 1):.3f} ({overall_correct}/{overall_total})")
 
     if sem_total > 50:
-        print(f"\n     CLIP features {'ARE' if sem_acc > 0.3 else 'are NOT yet'} providing meaningful semantic signal.")
-        print(f"     Spatial predicates still dominate frequency (ratio {spa_total / max(sem_total, 1):.1f}x).")
-    else:
-        print(f"\n     Insufficient semantic predicate samples for meaningful CLIP assessment.")
-        print(f"     Need more training data with semantic interactions.")
+        print(f"     Spatial/semantic frequency ratio:            "
+              f"{spa_total / max(sem_total, 1):.1f}x")
+    # Splitting accuracy by predicate group says nothing on its own about
+    # whether CLIP helped. This block used to announce "CLIP features ARE
+    # providing meaningful semantic signal" whenever semantic accuracy cleared
+    # 0.3 - in runs with no CLIP at all. Attribution needs the matched
+    # no-CLIP control, which is what run_visual_experiment.py measures.
+    if clip_dim > 0:
+        print("     Attribution to CLIP requires the matched geometry control; "
+              "see run_visual_experiment.py --collect.")
 
     print(f"\n  8. Pipeline Readiness for Grounded Captioning:")
     print(f"     Model:     {'READY' if best_val_acc > 0.3 else 'NEEDS IMPROVEMENT'}")
     print(f"     Checkpoint: relation_mlp.pt directly loadable by infer_relationships_learned()")
     print(f"     Vocab:     label_vocab.json + pred_vocab.json present")
-    print(f"     Mode:      visual-semantic (1669-dim input)")
-    print(f"     Coverage:  {dataset_size:,} training samples with partial CLIP coverage")
+    print(f"     Mode:      {mode} ({in_dim}-dim input)")
+    print(f"     Coverage:  {dataset_size:,} training samples")
 
     print(f"\n{'=' * 78}")
     print("  TRAINING COMPLETE")
@@ -1112,6 +1343,34 @@ def compute_class_weights(pred_counter, pred_vocab, num_predicates, ignore_index
     return weights
 
 
+def compute_inverse_frequency_weights(pred_counter, pred_vocab, num_predicates,
+                                      ignore_index=0, alpha=0.5):
+    """Class weights proportional to (1 / count) ** alpha, normalised to mean 1.
+
+    alpha=0 is unweighted, alpha=1 is full inverse frequency. Values around
+    0.25-0.5 trade a little top-1 accuracy for a sizeable macro-F1 gain. The
+    effective-number scheme (beta=0.999) is far more aggressive than that on
+    this predicate distribution and costs several points of top-1.
+    """
+    counts = torch.zeros(num_predicates)
+    for pred_str, count in pred_counter.items():
+        counts[pred_vocab[pred_str]] = count
+
+    weights = torch.zeros(num_predicates)
+    valid = []
+    for i in range(num_predicates):
+        if i == ignore_index or pred_vocab.token(i) in (Vocab.PAD, Vocab.UNK):
+            continue
+        if counts[i].item() > 0:
+            weights[i] = (1.0 / counts[i].item()) ** alpha
+            valid.append(i)
+
+    if valid:
+        weights = weights / weights[valid].sum() * len(valid)
+    weights[ignore_index] = 0.0
+    return weights
+
+
 def classifier_l2_loss(model, weight=1e-4):
     if isinstance(model, RelationTransformer):
         return weight * model.output.weight.norm(2).pow(2) * 0.5
@@ -1131,8 +1390,13 @@ if __name__ == "__main__":
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Geometry-only MLP (baseline)
-  python train_full_visual_semantic.py
+  # Geometry-only MLP, extended geometry, frozen E0 split (recommended baseline)
+  python train_full_visual_semantic.py --no-visual --geo-mode ext --geo-norm \
+      --loss ce --class-weight-alpha 0 --split-manifest splits/e0_image_split.json \
+      --checkpoint-dir checkpoints_e2_geo
+
+  # Geometry-only MLP, legacy 5-dim geometry (E0 reproduction)
+  python train_full_visual_semantic.py --no-visual
 
   # MLP with visual-semantic features (mixed/fallback)
   python train_full_visual_semantic.py --use-visual
@@ -1147,8 +1411,18 @@ Examples:
   python train_full_visual_semantic.py --use-visual --require-visual --use-union --use-pose --model transformer
         """,
     )
-    parser.add_argument("--use-visual", action="store_true", default=USE_VISUAL,
+    parser.add_argument("--use-visual", dest="use_visual", action="store_true",
+                        default=USE_VISUAL,
                         help="Enable CLIP visual features")
+    # --use-visual defaults to True, so without an explicit opposite flag the
+    # geometry-only baseline documented above was unreachable from the CLI.
+    parser.add_argument("--no-visual", dest="use_visual", action="store_false",
+                        help="Disable CLIP visual features (geometry-only baseline)")
+    parser.add_argument("--visual-filter-only", action="store_true", default=False,
+                        help="Load the CLIP cache to fix the sample population but "
+                             "build the model with clip_dim=0. This is how the "
+                             "geometry control of the feature ablation is run on "
+                             "exactly the same samples as the CLIP variants.")
     parser.add_argument("--require-visual", action="store_true", default=False,
                         help="Strict mode: drop samples with missing CLIP embeddings")
     parser.add_argument("--use-pose", action="store_true", default=False,
@@ -1163,6 +1437,42 @@ Examples:
     parser.add_argument("--model", type=str, default=MODEL_TYPE, choices=["mlp", "transformer"],
                         help="Model architecture (mlp or transformer)")
     parser.add_argument("--vg-root", type=str, default=str(VG_ROOT))
+    parser.add_argument("--clip-cache", type=str, default=None,
+                        help="Path to the CLIP feature cache built by "
+                             "build_clip_cache.py (default: <vg-root>/clip_cache_proper.pt)")
+    parser.add_argument("--geo-mode", type=str, default=GEO_MODE,
+                        choices=["none", "basic", "ext"],
+                        help="Geometry descriptor: 'none' = 0-dim (visual-only "
+                             "control), 'basic' = 5-dim legacy, "
+                             "'ext' = 19-dim extended (adds subject-relative "
+                             "offsets, asymmetric containment, absolute scale "
+                             "and position, signed vertical gaps, aspect "
+                             "ratios). Same boxes, no new data.")
+    parser.add_argument("--geo-norm", action="store_true", default=GEO_NORM,
+                        help="Standardise the geometry block with a "
+                             "BatchNorm1d whose running statistics are stored "
+                             "in the checkpoint (recommended with --geo-mode ext)")
+    parser.add_argument("--predicate-scheme", type=str, default=PREDICATE_SCHEME,
+                        choices=["v1", "v2"],
+                        help="Predicate normalisation. 'v1' = frozen E0 "
+                             "behaviour (exact-match map + allowlist). 'v2' "
+                             "additionally recovers inflections, trailing "
+                             "articles and paraphrases onto the SAME 19 "
+                             "classes (+18.4%% annotations) and drops passives "
+                             "instead of labelling the pair backwards.")
+    parser.add_argument("--loss", type=str, default=LOSS, choices=["ce", "focal"],
+                        help="Training objective (default: focal, legacy)")
+    parser.add_argument("--class-weight-alpha", type=float, default=None,
+                        help="Class weights = (1/count)**alpha computed on the "
+                             "TRAIN split. 0 = unweighted. Omit to keep the "
+                             "legacy effective-number (beta=0.999) weights.")
+    parser.add_argument("--select-metric", type=str, default=SELECT_METRIC,
+                        choices=["top1", "macro_f1"],
+                        help="Validation metric used to pick the best epoch")
+    parser.add_argument("--dropout", type=float, default=DROPOUT)
+    parser.add_argument("--weight-decay", type=float, default=WEIGHT_DECAY)
+    parser.add_argument("--d-model", type=int, default=D_MODEL,
+                        help="Transformer width (ignored for --model mlp)")
     parser.add_argument("--split-manifest", type=str, default=None,
                         help="Frozen image-disjoint split manifest (e.g. "
                              "splits/e0_image_split.json). When supplied it "
@@ -1172,6 +1482,9 @@ Examples:
 
     USE_VISUAL = args.use_visual
     REQUIRE_VISUAL = args.require_visual
+    VISUAL_FILTER_ONLY = args.visual_filter_only
+    if VISUAL_FILTER_ONLY and not args.use_visual:
+        parser.error("--visual-filter-only requires visual loading (drop --no-visual)")
     USE_POSE = args.use_pose
     USE_UNION = args.use_union
     BATCH_SIZE = args.batch_size
@@ -1180,9 +1493,19 @@ Examples:
     SEED = args.seed
     MODEL_TYPE = args.model
     SPLIT_MANIFEST = args.split_manifest
+    GEO_MODE = args.geo_mode
+    PREDICATE_SCHEME = args.predicate_scheme
+    GEO_NORM = args.geo_norm
+    LOSS = args.loss
+    CLASS_WEIGHT_ALPHA = args.class_weight_alpha
+    SELECT_METRIC = args.select_metric
+    DROPOUT = args.dropout
+    WEIGHT_DECAY = args.weight_decay
+    D_MODEL = args.d_model
     CHECKPOINT_DIR = Path(args.checkpoint_dir)
     VG_ROOT = Path(args.vg_root)
     VG_IMAGE_DIR = VG_ROOT / "images"
-    CLIP_CACHE_PATH = VG_ROOT / "clip_cache_proper.pt"
+    CLIP_CACHE_PATH = (Path(args.clip_cache) if args.clip_cache
+                       else VG_ROOT / "clip_cache_proper.pt")
 
     main()

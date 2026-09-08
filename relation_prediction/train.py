@@ -1,4 +1,24 @@
 """
+OBSOLETE — do not use for new experiments.
+
+This is the ORIGINAL relation trainer. It has been superseded by
+``train_full_visual_semantic.py``, which is the only trainer that supports the
+things the current protocol requires:
+
+    * ``--split-manifest``   the frozen image-disjoint E0 split. Without it
+                             this script does a sample-level random_split,
+                             which LEAKS: VG averages ~2.5 kept relations per
+                             image, so sibling relations from one image land on
+                             both sides of the split and validation is
+                             optimistic.
+    * ``--geo-mode ext``     the 19-dim geometry descriptor.
+    * ``--predicate-scheme`` the predicate normaliser used to build the corpus.
+
+Nothing imports this module. It is kept only because it is the provenance of
+the pre-manifest checkpoints in checkpoints_old/ and checkpoints_v2/. Any
+number produced by running it is NOT comparable to the E0/E2 results.
+
+---------------------------------------------------------------------------
 Train the MLP relation classifier on Visual Genome.
 
 Supports two modes:

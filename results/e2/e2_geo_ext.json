@@ -1,0 +1,430 @@
+{
+  "experiment": "E0",
+  "description": "Image-disjoint ground-truth Visual Genome relation evaluation. Raw logits only: no temperature, priors, calibration, adaptive margins, heuristic correction or gating. PAD/UNK excluded from the candidate set and from scoring.",
+  "checkpoint": {
+    "path": "C:/Users/Asus/AppData/Local/Temp/claude/C--Users-Asus-OneDrive-Desktop-Image-Detection-using-GNNs/b8f687d3-d13d-4483-97a8-2620573edb88/scratchpad/ckpt_e2_local/relation_mlp.pt",
+    "sha256": "8e4ca84fb972e00f6851d8ba15de141cb05d39adc395fc08e6eb8a1a54cd1e7f",
+    "inferred_config": {
+      "wrapper_format": "model_state_dict+model_config",
+      "model_type": "mlp",
+      "num_labels": 80,
+      "num_predicates": 21,
+      "embed_dim": 64,
+      "hidden_dims": [
+        256,
+        128
+      ],
+      "clip_dim": 0,
+      "pose_dim": 0,
+      "union_dim": 0,
+      "geo_dim": 19,
+      "geo_norm": true,
+      "geo_mode": "ext",
+      "input_dim": 147,
+      "feature_mode": "geometry-only"
+    },
+    "parameter_count": 78651,
+    "label_vocab_path": "C:/Users/Asus/AppData/Local/Temp/claude/C--Users-Asus-OneDrive-Desktop-Image-Detection-using-GNNs/b8f687d3-d13d-4483-97a8-2620573edb88/scratchpad/ckpt_e2_local/label_vocab.json",
+    "pred_vocab_path": "C:/Users/Asus/AppData/Local/Temp/claude/C--Users-Asus-OneDrive-Desktop-Image-Detection-using-GNNs/b8f687d3-d13d-4483-97a8-2620573edb88/scratchpad/ckpt_e2_local/pred_vocab.json"
+  },
+  "split": {
+    "manifest_path": "C:/Users/Asus/OneDrive/Desktop/Image Detection using GNNs/splits/e0_image_split.json",
+    "seed": 42,
+    "split_unit": "image_id",
+    "fractions": {
+      "train": 0.7,
+      "val": 0.15,
+      "test": 0.15
+    },
+    "n_images_train": 19001,
+    "n_images_val": 4071,
+    "n_images_test": 4073,
+    "n_samples_train": 48191,
+    "n_samples_val": 10482,
+    "n_samples_test": 10227,
+    "image_overlap_check": {
+      "train_n_val": 0,
+      "train_n_test": 0,
+      "val_n_test": 0,
+      "status": "PASS",
+      "note": "image-level disjointness verified; no image appears in two splits"
+    }
+  },
+  "data": {
+    "n_images_in_relationships_json": 108077,
+    "raw_count": 2316104,
+    "kept_count": 68900,
+    "skipped_small_box": 1587,
+    "retention": 0.029748,
+    "qualifying_image_count": 27145
+  },
+  "metrics": {
+    "top1": 0.638897,
+    "recall@3": 0.923047,
+    "recall@5": 0.965386,
+    "macro_f1": 0.381597,
+    "weighted_f1": 0.614064,
+    "n_test_samples": 10227,
+    "n_correct_top1": 6534,
+    "macro_f1_note": "mean F1 over predicates with support > 0",
+    "zero_support_predicates": [
+      "next to"
+    ],
+    "n_zero_support_predicates": 1,
+    "majority_baseline": 0.341254,
+    "random_baseline": 0.053877
+  },
+  "baselines": {
+    "majority_baseline": 0.341254,
+    "majority_class": "on",
+    "majority_class_source": "most frequent predicate in the TRAIN split",
+    "random_baseline": 0.053877,
+    "random_baseline_note": "uniform over 19 valid predicates, random.Random(42), deterministic"
+  },
+  "per_predicate": {
+    "above": {
+      "precision": 0.6,
+      "recall": 0.245902,
+      "f1": 0.348837,
+      "support": 61,
+      "predicted_count": 25,
+      "true_positives": 15
+    },
+    "attached to": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 29,
+      "predicted_count": 0,
+      "true_positives": 0
+    },
+    "behind": {
+      "precision": 0.562112,
+      "recall": 0.478836,
+      "f1": 0.517143,
+      "support": 378,
+      "predicted_count": 322,
+      "true_positives": 181
+    },
+    "carrying": {
+      "precision": 0.619048,
+      "recall": 0.132203,
+      "f1": 0.217877,
+      "support": 295,
+      "predicted_count": 63,
+      "true_positives": 39
+    },
+    "covering": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 13,
+      "predicted_count": 0,
+      "true_positives": 0
+    },
+    "holding": {
+      "precision": 0.743523,
+      "recall": 0.892968,
+      "f1": 0.811422,
+      "support": 1607,
+      "predicted_count": 1930,
+      "true_positives": 1435
+    },
+    "in": {
+      "precision": 0.695142,
+      "recall": 0.553333,
+      "f1": 0.616184,
+      "support": 750,
+      "predicted_count": 597,
+      "true_positives": 415
+    },
+    "in front of": {
+      "precision": 0.612903,
+      "recall": 0.115152,
+      "f1": 0.193878,
+      "support": 165,
+      "predicted_count": 31,
+      "true_positives": 19
+    },
+    "inside": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 75,
+      "predicted_count": 0,
+      "true_positives": 0
+    },
+    "looking at": {
+      "precision": 0.493671,
+      "recall": 0.210811,
+      "f1": 0.295455,
+      "support": 185,
+      "predicted_count": 79,
+      "true_positives": 39
+    },
+    "near": {
+      "precision": 0.57882,
+      "recall": 0.677389,
+      "f1": 0.624237,
+      "support": 1057,
+      "predicted_count": 1237,
+      "true_positives": 716
+    },
+    "next to": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 0,
+      "predicted_count": 0,
+      "true_positives": 0
+    },
+    "on": {
+      "precision": 0.639885,
+      "recall": 0.762178,
+      "f1": 0.695698,
+      "support": 3490,
+      "predicted_count": 4157,
+      "true_positives": 2660
+    },
+    "over": {
+      "precision": 0.235294,
+      "recall": 0.387097,
+      "f1": 0.292683,
+      "support": 31,
+      "predicted_count": 51,
+      "true_positives": 12
+    },
+    "riding": {
+      "precision": 0.478125,
+      "recall": 0.424411,
+      "f1": 0.449669,
+      "support": 721,
+      "predicted_count": 640,
+      "true_positives": 306
+    },
+    "sitting on": {
+      "precision": 0.524096,
+      "recall": 0.450777,
+      "f1": 0.48468,
+      "support": 579,
+      "predicted_count": 498,
+      "true_positives": 261
+    },
+    "standing on": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 128,
+      "predicted_count": 0,
+      "true_positives": 0
+    },
+    "under": {
+      "precision": 0.701657,
+      "recall": 0.412338,
+      "f1": 0.519427,
+      "support": 308,
+      "predicted_count": 181,
+      "true_positives": 127
+    },
+    "wearing": {
+      "precision": 0.742788,
+      "recall": 0.870423,
+      "f1": 0.801556,
+      "support": 355,
+      "predicted_count": 416,
+      "true_positives": 309
+    }
+  },
+  "confusion_matrix": {
+    "in": {
+      "in": 415,
+      "on": 200,
+      "near": 43,
+      "wearing": 37,
+      "sitting on": 34,
+      "behind": 11,
+      "holding": 6,
+      "riding": 1,
+      "over": 1,
+      "under": 1,
+      "carrying": 1
+    },
+    "wearing": {
+      "wearing": 309,
+      "on": 40,
+      "holding": 2,
+      "carrying": 2,
+      "riding": 1,
+      "near": 1
+    },
+    "in front of": {
+      "near": 71,
+      "behind": 23,
+      "in front of": 19,
+      "on": 15,
+      "holding": 15,
+      "in": 6,
+      "under": 5,
+      "looking at": 5,
+      "over": 2,
+      "above": 1,
+      "riding": 1,
+      "sitting on": 1,
+      "carrying": 1
+    },
+    "near": {
+      "near": 716,
+      "on": 152,
+      "behind": 67,
+      "holding": 33,
+      "under": 23,
+      "in": 21,
+      "looking at": 21,
+      "riding": 7,
+      "in front of": 6,
+      "above": 4,
+      "sitting on": 4,
+      "over": 2,
+      "carrying": 1
+    },
+    "under": {
+      "under": 127,
+      "holding": 77,
+      "near": 45,
+      "on": 33,
+      "in": 11,
+      "behind": 8,
+      "in front of": 3,
+      "carrying": 2,
+      "over": 1,
+      "looking at": 1
+    },
+    "behind": {
+      "behind": 181,
+      "near": 135,
+      "on": 32,
+      "under": 7,
+      "in": 6,
+      "holding": 6,
+      "sitting on": 5,
+      "looking at": 4,
+      "over": 1,
+      "above": 1
+    },
+    "on": {
+      "on": 2660,
+      "riding": 290,
+      "sitting on": 192,
+      "holding": 121,
+      "near": 107,
+      "in": 69,
+      "behind": 14,
+      "wearing": 10,
+      "under": 9,
+      "looking at": 7,
+      "over": 7,
+      "carrying": 3,
+      "in front of": 1
+    },
+    "riding": {
+      "on": 399,
+      "riding": 306,
+      "near": 7,
+      "in": 6,
+      "behind": 2,
+      "holding": 1
+    },
+    "sitting on": {
+      "sitting on": 261,
+      "on": 255,
+      "riding": 27,
+      "in": 26,
+      "near": 4,
+      "carrying": 3,
+      "holding": 2,
+      "looking at": 1
+    },
+    "holding": {
+      "holding": 1435,
+      "on": 110,
+      "near": 21,
+      "wearing": 15,
+      "carrying": 10,
+      "riding": 5,
+      "under": 5,
+      "in": 3,
+      "sitting on": 1,
+      "behind": 1,
+      "looking at": 1
+    },
+    "looking at": {
+      "holding": 52,
+      "near": 49,
+      "looking at": 39,
+      "on": 31,
+      "behind": 7,
+      "wearing": 3,
+      "in front of": 2,
+      "carrying": 1,
+      "over": 1
+    },
+    "carrying": {
+      "holding": 178,
+      "wearing": 42,
+      "carrying": 39,
+      "on": 27,
+      "near": 4,
+      "under": 2,
+      "behind": 1,
+      "over": 1,
+      "riding": 1
+    },
+    "covering": {
+      "over": 7,
+      "near": 3,
+      "on": 2,
+      "above": 1
+    },
+    "above": {
+      "over": 16,
+      "above": 15,
+      "on": 14,
+      "near": 12,
+      "behind": 4
+    },
+    "standing on": {
+      "on": 120,
+      "near": 5,
+      "holding": 2,
+      "riding": 1
+    },
+    "inside": {
+      "on": 42,
+      "in": 31,
+      "near": 2
+    },
+    "over": {
+      "over": 12,
+      "on": 10,
+      "near": 3,
+      "above": 3,
+      "behind": 2,
+      "in": 1
+    },
+    "attached to": {
+      "on": 15,
+      "near": 9,
+      "under": 2,
+      "in": 2,
+      "behind": 1
+    }
+  },
+  "runtime": {
+    "device": "cpu",
+    "elapsed_seconds": 33.54,
+    "timestamp_utc": "2026-09-01T09:43:06.473438+00:00",
+    "python": "3.13.7",
+    "torch": "2.10.0+cpu",
+    "platform": "Windows-11-10.0.26200-SP0"
+  }
+}

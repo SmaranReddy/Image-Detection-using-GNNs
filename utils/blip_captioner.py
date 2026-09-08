@@ -302,6 +302,119 @@ def build_semantic_prompt(
 # Image normalisation helper
 # ---------------------------------------------------------------------------
 
+BASELINE_PREFIX = "a photo of"
+
+# Present-participle surface form used to splice a predicate into the prefix.
+_PRED_PREFIX_FORM: Dict[str, str] = {
+    "holding":     "holding",
+    "riding":      "riding",
+    "wearing":     "wearing",
+    "carrying":    "carrying",
+    "sitting on":  "sitting on",
+    "standing on": "standing on",
+    "looking at":  "looking at",
+    "eating":      "eating",
+    "on":          "on",
+    "in":          "in",
+    "inside":      "inside",
+    "under":       "under",
+    "above":       "above",
+    "over":        "over",
+    "near":        "near",
+    "next to":     "next to",
+    "behind":      "behind",
+    "in front of": "in front of",
+    "attached to": "attached to",
+    "covering":    "covering",
+}
+
+GROUNDING_MIN_CONFIDENCE = 0.35
+
+
+def build_blip_prefix(
+    detections: List[Detection],
+    relations: List[Dict],
+    min_confidence: float = GROUNDING_MIN_CONFIDENCE,
+    max_relations: int = 1,
+) -> Tuple[str, List[Dict]]:
+    """Build the decoder prefix BLIP actually generates from.
+
+    Why this exists
+    ---------------
+    ``build_semantic_prompt`` produces a multi-line INSTRUCTION block ("Detected
+    scene elements: ... Do not mention objects not listed"). BLIP-base
+    (``Salesforce/blip-image-captioning-base``) is not instruction-tuned: its
+    text decoder continues a caption prefix, it does not follow directions. The
+    previous code acknowledged this by building the semantic prompt and then
+    silently generating from the constant ``"a photo of"`` instead - so the
+    detections and the predicted relations had NO effect whatsoever on the
+    generated text, and the "grounded" system differed from the baseline only
+    in the post-hoc gating stage.
+
+    The fix keeps the honest part of that reasoning (BLIP cannot follow the
+    instruction block) and supplies grounding through the one channel BLIP does
+    respect: the decoder prefix. We splice the single highest-confidence
+    verified relation into a natural caption opening -
+
+        "a photo of a person riding a bicycle"
+
+    - and let BLIP complete the surrounding scene. Every object named in the
+    prefix comes from a YOLO detection that survived verification, so the
+    injected span is grounded by construction; the completion is still free
+    text and is still checked by ``gate_caption``.
+
+    Relations below ``min_confidence`` are not injected: a wrong relation in the
+    prefix is a hallucination we would be creating ourselves. With no confident
+    relation the prefix degrades to the plain baseline opening, which makes the
+    grounded system a strict superset of the baseline rather than a different
+    generator.
+
+    Returns:
+        (prefix, used_relations)
+    """
+    usable = [
+        r for r in relations
+        if r.get("adjusted_confidence", r.get("confidence", 0.0)) >= min_confidence
+        and _PRED_PREFIX_FORM.get(r.get("predicate", ""))
+    ]
+    usable.sort(
+        key=lambda r: -r.get("adjusted_confidence", r.get("confidence", 0.0)),
+    )
+
+    used: List[Dict] = []
+    parts: List[str] = []
+    for r in usable[:max_relations]:
+        subject = str(r["subject"]).replace("_", " ")
+        obj = str(r["object"]).replace("_", " ")
+        verb = _PRED_PREFIX_FORM[r["predicate"]]
+        parts.append(
+            f"{_indefinite_article(subject)} {subject} {verb} "
+            f"{_indefinite_article(obj)} {obj}"
+        )
+        used.append(r)
+
+    if not parts:
+        return BASELINE_PREFIX, []
+
+    return f"{BASELINE_PREFIX} {' and '.join(parts)}", used
+
+
+def _strip_prefix_artifacts(caption: str, prefix: str) -> str:
+    """Normalise a decoded caption that starts with the conditioning prefix.
+
+    BLIP echoes the prefix back in the decoded string, which is what we want -
+    the grounded span is part of the caption. This only tidies the join
+    (duplicated prefix, stray whitespace, missing capital).
+    """
+    text = " ".join(caption.split())
+    lowered = text.lower()
+    plain = prefix.lower().strip()
+    while lowered.startswith(plain + " " + plain):
+        text = text[len(plain) + 1:]
+        lowered = text.lower()
+    return text.strip()
+
+
 def _to_pil(image) -> Image.Image:
     """Accept a PIL Image or a CHW/HWC torch.Tensor and return a PIL Image."""
     if isinstance(image, Image.Image):
@@ -625,18 +738,55 @@ for canon in _SYNONYMS.values():
     _OBJECT_NOUNS = _OBJECT_NOUNS | frozenset(parts) | frozenset({canon.replace(" ", "_")})
 
 
+_CANON_KEY_RE = re.compile(r"[^a-z]+")
+
+
+def _canonical_object_key(phrase: str) -> str:
+    """Collapse an object name to a spacing/punctuation-insensitive key.
+
+    "surfboard", "surf board", "surf-board" and "Surf Board" all map to
+    "surfboard". Without this, a detected `surfboard` and a caption that says
+    "surf board" were treated as two unrelated objects: the caption phrase was
+    scored as an unsupported hallucination and pushed the caption towards the
+    safe-fallback template, while the real detection went unmatched.
+    """
+    return _CANON_KEY_RE.sub("", phrase.lower())
+
+
+def _expand_object_aliases(name: str) -> set:
+    """Every surface form that should be treated as the same object as `name`.
+
+    Closes the synonym table in BOTH directions - a caption saying "motorbike"
+    about a detected "motorcycle" was previously flagged as a hallucination
+    because only synonym -> canonical was resolved, never canonical -> synonym.
+    """
+    name = name.lower().replace("_", " ").strip()
+    forms = {name}
+    canonical = _SYNONYMS.get(name)
+    if canonical:
+        forms.add(canonical)
+    for syn, canon_form in _SYNONYMS.items():
+        if canon_form == name or canon_form == canonical or syn == name:
+            forms.add(syn)
+            forms.add(canon_form)
+    for f in list(forms):
+        forms.update(f.split())
+    return {f for f in forms if f}
+
+
 def _build_label_word_set(detections: List[Detection]) -> frozenset:
     """All individual words across every detection label, lower-cased,
     plus known synonyms so that e.g. 'woman' matches a 'person' detection."""
     words: set = set()
     for d in detections:
         label = d["label"].lower().replace("_", " ")
-        words.add(label)
-        words.update(label.split())
+        words.update(_expand_object_aliases(label))
     for w in list(words):
         if w in _INVERTED_SYNONYMS:
             words.update(_INVERTED_SYNONYMS[w])
-    return frozenset(words)
+    # Spacing-insensitive keys so "surf board" matches a "surfboard" detection.
+    words.update(_canonical_object_key(w) for w in list(words))
+    return frozenset(w for w in words if w)
 
 
 def _extract_content_words(text: str) -> List[str]:
@@ -668,7 +818,24 @@ def _unsupported_fraction(caption: str, label_words: frozenset) -> float:
     content = _extract_content_words(caption)
     if not content:
         return 0.0
-    unsupported = [w for w in content if w not in label_words]
+
+    # A detection label written as two words in the caption ("surf board" for a
+    # `surfboard` detection) is invisible to single-token matching, so both
+    # halves used to count as unsupported. Mark the members of any adjacent
+    # token pair whose concatenation matches a detection as supported.
+    raw_tokens = re.findall(r"[a-z]+", caption.lower())
+    split_label_parts: set = set()
+    for first, second in zip(raw_tokens, raw_tokens[1:]):
+        if _canonical_object_key(first + second) in label_words:
+            split_label_parts.add(first)
+            split_label_parts.add(second)
+
+    unsupported = [
+        w for w in content
+        if w not in label_words
+        and _canonical_object_key(w) not in label_words
+        and w not in split_label_parts
+    ]
     return len(unsupported) / len(content)
 
 
@@ -909,9 +1076,18 @@ def _check_unsupported_objects(
             supported.append(phrase)
             continue
 
-        # Check canonical form
+        # Spacing/punctuation-insensitive match ("surf board" vs "surfboard").
+        if _canonical_object_key(phrase) in label_words:
+            supported.append(phrase)
+            continue
+
+        # Check canonical form, in both synonym directions.
         canon = synonym_to_canon.get(phrase)
-        if canon and canon in label_words:
+        if canon and (canon in label_words
+                      or _canonical_object_key(canon) in label_words):
+            supported.append(phrase)
+            continue
+        if _expand_object_aliases(phrase) & set(label_words):
             supported.append(phrase)
             continue
 
@@ -1123,9 +1299,11 @@ def generate_blip_candidates(
     t0 = time.time()
     pil_image = _to_pil(image)
 
+    # Ungrounded baseline: the prefix is a constant, independent of the image
+    # content, detections and relations.
     inputs = _processor(
         images=pil_image,
-        text="a photo of",
+        text=BASELINE_PREFIX,
         return_tensors="pt",
     ).to(_device)
 
@@ -1205,9 +1383,11 @@ def generate_blip_baseline(
     t0 = time.time()
     pil_image = _to_pil(image)
 
+    # Ungrounded baseline: the prefix is a constant, independent of the image
+    # content, detections and relations.
     inputs = _processor(
         images=pil_image,
-        text="a photo of",
+        text=BASELINE_PREFIX,
         return_tensors="pt",
     ).to(_device)
 
@@ -1266,10 +1446,21 @@ def generate_blip_caption(
     t0 = time.time()
     pil_image = _to_pil(image)
 
-    # BLIP base generates best in unconditional mode
+    # Condition on the verified scene graph via the decoder prefix. The
+    # (subject, relation, object) triples reaching this entry point are plain
+    # tuples with no confidence attached, so they are treated as verified and
+    # injected directly. Passing the constant "a photo of" here - as this
+    # function used to - made the "grounded" caption byte-identical to the
+    # ungrounded baseline for every image.
+    rel_dicts = [
+        {"subject": subj, "predicate": rel.replace("_", " "), "object": obj,
+         "confidence": 1.0}
+        for subj, rel, obj in (relationships or [])
+    ]
+    prefix, _used = build_blip_prefix(detections, rel_dicts)
     inputs = _processor(
         images=pil_image,
-        text="a photo of",
+        text=prefix,
         return_tensors="pt",
     ).to(_device)
 
@@ -1281,9 +1472,12 @@ def generate_blip_caption(
             early_stopping=True,
         )
 
-    raw_caption = _processor.decode(output_ids[0], skip_special_tokens=True).strip()
+    raw_caption = _strip_prefix_artifacts(
+        _processor.decode(output_ids[0], skip_special_tokens=True), prefix,
+    )
     gen_time = time.time() - t0
     print(f"[BLIP] Grounded caption generated in {gen_time:.2f}s on {_device}.")
+    print(f"[BLIP]   conditioning prefix: {prefix!r}")
 
     if _device.type == "cuda":
         torch.cuda.empty_cache()
@@ -1348,15 +1542,18 @@ def generate_blip_semantic_caption(
         for r in relations
     ]
 
-    # Step 6 - Build redesigned semantic prompt (kept for display / debugging)
+    # Step 6 - Build the human-readable evidence block. This is reported and
+    # logged, but it is NOT what BLIP generates from: BLIP-base is not
+    # instruction-tuned and cannot follow it (see build_blip_prefix).
     prompt = build_semantic_prompt(detections, verbalized)
 
-    # BLIP base generates best in unconditional mode — pass a minimal prompt
-    # to start generation; the evidence gating (gate_caption) provides the
-    # grounded safety net.
+    # Step 7 - Condition generation on the evidence through the decoder prefix,
+    # which is the channel BLIP-base actually responds to. Falls back to the
+    # plain baseline opening when no relation clears the confidence bar.
+    prefix, grounding_relations = build_blip_prefix(detections, relations)
     inputs = _processor(
         images=pil_image,
-        text="a photo of",
+        text=prefix,
         return_tensors="pt",
     ).to(_device)
 
@@ -1368,9 +1565,13 @@ def generate_blip_semantic_caption(
             early_stopping=True,
         )
 
-    raw_caption = _processor.decode(output_ids[0], skip_special_tokens=True).strip()
+    raw_caption = _strip_prefix_artifacts(
+        _processor.decode(output_ids[0], skip_special_tokens=True), prefix,
+    )
     gen_time = time.time() - t0
     print(f"[BLIP] Semantic caption generated in {gen_time:.2f}s on {_device}.")
+    print(f"[BLIP]   conditioning prefix: {prefix!r} "
+          f"({len(grounding_relations)} relation(s) injected)")
 
     if _device.type == "cuda":
         torch.cuda.empty_cache()

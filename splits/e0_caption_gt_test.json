@@ -1,0 +1,2038 @@
+{
+  "meta": {
+    "created_utc": "2026-09-01T09:41:19.667748+00:00",
+    "source": "Visual Genome relationship entity names (human annotations)",
+    "label_space": "COCO-80 via relation_prediction.vg_dataset.normalize_label",
+    "split_manifest": "C:/Users/Asus/OneDrive/Desktop/Image Detection using GNNs/splits/e0_image_split.json",
+    "split": "test",
+    "seed": 42,
+    "min_objects": 2,
+    "limit": 250,
+    "n_images": 250,
+    "n_images_with_file_on_disk": 0,
+    "n_dropped_below_min_objects": 156,
+    "n_dropped_missing_image": 0,
+    "mean_objects_per_image": 2.78,
+    "label_histogram": {
+      "person": 200,
+      "chair": 29,
+      "car": 27,
+      "bottle": 25,
+      "bench": 20,
+      "umbrella": 19,
+      "bicycle": 18,
+      "dog": 17,
+      "backpack": 16,
+      "bed": 15,
+      "surfboard": 15,
+      "cell phone": 15,
+      "tie": 15,
+      "skateboard": 15,
+      "motorcycle": 13,
+      "cat": 12,
+      "truck": 12,
+      "bus": 11,
+      "book": 10,
+      "couch": 9,
+      "tv": 9,
+      "train": 9,
+      "laptop": 8,
+      "potted plant": 8,
+      "bowl": 7,
+      "suitcase": 7,
+      "clock": 6,
+      "horse": 6,
+      "skis": 6,
+      "snowboard": 6,
+      "microwave": 5,
+      "traffic light": 5,
+      "spoon": 5,
+      "cow": 4,
+      "bear": 4,
+      "boat": 4,
+      "cake": 4,
+      "fork": 4,
+      "kite": 4,
+      "knife": 4,
+      "tennis racket": 4,
+      "banana": 4,
+      "keyboard": 4,
+      "frisbee": 4,
+      "refrigerator": 3,
+      "mouse": 3,
+      "orange": 3,
+      "remote": 3,
+      "carrot": 3,
+      "broccoli": 3,
+      "elephant": 3,
+      "oven": 2,
+      "airplane": 2,
+      "scissors": 2,
+      "cup": 2,
+      "apple": 2,
+      "giraffe": 2,
+      "toilet": 2,
+      "vase": 2,
+      "sink": 2,
+      "baseball glove": 2,
+      "pizza": 1,
+      "zebra": 1,
+      "teddy bear": 1,
+      "sandwich": 1,
+      "bird": 1,
+      "wine glass": 1,
+      "stop sign": 1,
+      "sheep": 1,
+      "parking meter": 1,
+      "fire hydrant": 1
+    },
+    "why": "Independent of YOLO. Scoring CHAIR/POPE against YOLO's own detections is circular because the grounded system is conditioned and gated on exactly those detections."
+  },
+  "images": {
+    "1076": {
+      "objects": [
+        "chair",
+        "clock"
+      ],
+      "file": null
+    },
+    "1156": {
+      "objects": [
+        "bed",
+        "chair"
+      ],
+      "file": null
+    },
+    "2280": {
+      "objects": [
+        "bench",
+        "person"
+      ],
+      "file": null
+    },
+    "61516": {
+      "objects": [
+        "microwave",
+        "refrigerator"
+      ],
+      "file": null
+    },
+    "107921": {
+      "objects": [
+        "person",
+        "surfboard"
+      ],
+      "file": null
+    },
+    "498397": {
+      "objects": [
+        "chair",
+        "laptop",
+        "person"
+      ],
+      "file": null
+    },
+    "713521": {
+      "objects": [
+        "person",
+        "surfboard"
+      ],
+      "file": null
+    },
+    "1160182": {
+      "objects": [
+        "cow",
+        "horse",
+        "person"
+      ],
+      "file": null
+    },
+    "1592058": {
+      "objects": [
+        "cell phone",
+        "person"
+      ],
+      "file": null
+    },
+    "1592661": {
+      "objects": [
+        "person",
+        "skis"
+      ],
+      "file": null
+    },
+    "1592832": {
+      "objects": [
+        "bicycle",
+        "car",
+        "motorcycle",
+        "person"
+      ],
+      "file": null
+    },
+    "1593184": {
+      "objects": [
+        "book",
+        "cat",
+        "oven"
+      ],
+      "file": null
+    },
+    "1593248": {
+      "objects": [
+        "bowl",
+        "chair",
+        "laptop",
+        "microwave",
+        "person"
+      ],
+      "file": null
+    },
+    "2315368": {
+      "objects": [
+        "book",
+        "bottle",
+        "couch",
+        "person"
+      ],
+      "file": null
+    },
+    "2315538": {
+      "objects": [
+        "bottle",
+        "potted plant"
+      ],
+      "file": null
+    },
+    "2315907": {
+      "objects": [
+        "bear",
+        "bottle",
+        "chair",
+        "person"
+      ],
+      "file": null
+    },
+    "2316327": {
+      "objects": [
+        "bottle",
+        "person",
+        "tie"
+      ],
+      "file": null
+    },
+    "2317122": {
+      "objects": [
+        "bench",
+        "person",
+        "potted plant"
+      ],
+      "file": null
+    },
+    "2317278": {
+      "objects": [
+        "bench",
+        "book",
+        "person"
+      ],
+      "file": null
+    },
+    "2317974": {
+      "objects": [
+        "person",
+        "skateboard"
+      ],
+      "file": null
+    },
+    "2319216": {
+      "objects": [
+        "motorcycle",
+        "person"
+      ],
+      "file": null
+    },
+    "2319470": {
+      "objects": [
+        "bicycle",
+        "bottle"
+      ],
+      "file": null
+    },
+    "2319564": {
+      "objects": [
+        "car",
+        "person",
+        "umbrella"
+      ],
+      "file": null
+    },
+    "2319617": {
+      "objects": [
+        "person",
+        "skateboard"
+      ],
+      "file": null
+    },
+    "2319860": {
+      "objects": [
+        "person",
+        "skateboard"
+      ],
+      "file": null
+    },
+    "2320734": {
+      "objects": [
+        "bench",
+        "bottle",
+        "person",
+        "umbrella"
+      ],
+      "file": null
+    },
+    "2321245": {
+      "objects": [
+        "horse",
+        "person"
+      ],
+      "file": null
+    },
+    "2321357": {
+      "objects": [
+        "chair",
+        "person",
+        "tv"
+      ],
+      "file": null
+    },
+    "2321543": {
+      "objects": [
+        "cell phone",
+        "person"
+      ],
+      "file": null
+    },
+    "2323280": {
+      "objects": [
+        "bench",
+        "bottle",
+        "dog",
+        "person"
+      ],
+      "file": null
+    },
+    "2323531": {
+      "objects": [
+        "person",
+        "skateboard"
+      ],
+      "file": null
+    },
+    "2324083": {
+      "objects": [
+        "dog",
+        "person",
+        "umbrella"
+      ],
+      "file": null
+    },
+    "2324286": {
+      "objects": [
+        "bicycle",
+        "person",
+        "truck"
+      ],
+      "file": null
+    },
+    "2324541": {
+      "objects": [
+        "person",
+        "snowboard"
+      ],
+      "file": null
+    },
+    "2324928": {
+      "objects": [
+        "cell phone",
+        "person"
+      ],
+      "file": null
+    },
+    "2325023": {
+      "objects": [
+        "airplane",
+        "person",
+        "truck"
+      ],
+      "file": null
+    },
+    "2326414": {
+      "objects": [
+        "chair",
+        "laptop",
+        "mouse",
+        "person"
+      ],
+      "file": null
+    },
+    "2326541": {
+      "objects": [
+        "bus",
+        "person"
+      ],
+      "file": null
+    },
+    "2326649": {
+      "objects": [
+        "bicycle",
+        "car",
+        "person"
+      ],
+      "file": null
+    },
+    "2327480": {
+      "objects": [
+        "boat",
+        "cell phone",
+        "person"
+      ],
+      "file": null
+    },
+    "2328289": {
+      "objects": [
+        "laptop",
+        "person",
+        "suitcase"
+      ],
+      "file": null
+    },
+    "2328413": {
+      "objects": [
+        "orange",
+        "person",
+        "surfboard"
+      ],
+      "file": null
+    },
+    "2328849": {
+      "objects": [
+        "car",
+        "person",
+        "skateboard"
+      ],
+      "file": null
+    },
+    "2328877": {
+      "objects": [
+        "person",
+        "skis"
+      ],
+      "file": null
+    },
+    "2329320": {
+      "objects": [
+        "cat",
+        "chair",
+        "tv"
+      ],
+      "file": null
+    },
+    "2329334": {
+      "objects": [
+        "backpack",
+        "cake",
+        "fork",
+        "person"
+      ],
+      "file": null
+    },
+    "2329566": {
+      "objects": [
+        "bottle",
+        "person"
+      ],
+      "file": null
+    },
+    "2329636": {
+      "objects": [
+        "person",
+        "umbrella"
+      ],
+      "file": null
+    },
+    "2330211": {
+      "objects": [
+        "couch",
+        "person",
+        "remote"
+      ],
+      "file": null
+    },
+    "2330322": {
+      "objects": [
+        "kite",
+        "person"
+      ],
+      "file": null
+    },
+    "2330968": {
+      "objects": [
+        "bench",
+        "person"
+      ],
+      "file": null
+    },
+    "2332988": {
+      "objects": [
+        "bowl",
+        "carrot",
+        "fork"
+      ],
+      "file": null
+    },
+    "2333592": {
+      "objects": [
+        "person",
+        "skateboard"
+      ],
+      "file": null
+    },
+    "2334089": {
+      "objects": [
+        "bottle",
+        "fork",
+        "knife",
+        "pizza"
+      ],
+      "file": null
+    },
+    "2334659": {
+      "objects": [
+        "person",
+        "tie"
+      ],
+      "file": null
+    },
+    "2335621": {
+      "objects": [
+        "cell phone",
+        "person",
+        "tie"
+      ],
+      "file": null
+    },
+    "2336210": {
+      "objects": [
+        "backpack",
+        "person"
+      ],
+      "file": null
+    },
+    "2337423": {
+      "objects": [
+        "couch",
+        "person",
+        "remote"
+      ],
+      "file": null
+    },
+    "2337987": {
+      "objects": [
+        "person",
+        "skis"
+      ],
+      "file": null
+    },
+    "2340594": {
+      "objects": [
+        "kite",
+        "person",
+        "surfboard"
+      ],
+      "file": null
+    },
+    "2341178": {
+      "objects": [
+        "person",
+        "train"
+      ],
+      "file": null
+    },
+    "2342009": {
+      "objects": [
+        "backpack",
+        "bicycle",
+        "bus",
+        "car",
+        "motorcycle",
+        "person"
+      ],
+      "file": null
+    },
+    "2342925": {
+      "objects": [
+        "chair",
+        "person",
+        "umbrella"
+      ],
+      "file": null
+    },
+    "2343054": {
+      "objects": [
+        "person",
+        "train"
+      ],
+      "file": null
+    },
+    "2343137": {
+      "objects": [
+        "dog",
+        "person",
+        "scissors"
+      ],
+      "file": null
+    },
+    "2344039": {
+      "objects": [
+        "person",
+        "surfboard"
+      ],
+      "file": null
+    },
+    "2344665": {
+      "objects": [
+        "boat",
+        "horse",
+        "person"
+      ],
+      "file": null
+    },
+    "2344805": {
+      "objects": [
+        "person",
+        "tie"
+      ],
+      "file": null
+    },
+    "2344845": {
+      "objects": [
+        "person",
+        "tennis racket"
+      ],
+      "file": null
+    },
+    "2345098": {
+      "objects": [
+        "chair",
+        "cup",
+        "person",
+        "potted plant",
+        "umbrella"
+      ],
+      "file": null
+    },
+    "2345139": {
+      "objects": [
+        "person",
+        "tie"
+      ],
+      "file": null
+    },
+    "2346015": {
+      "objects": [
+        "car",
+        "cat"
+      ],
+      "file": null
+    },
+    "2346361": {
+      "objects": [
+        "backpack",
+        "person",
+        "skis"
+      ],
+      "file": null
+    },
+    "2346413": {
+      "objects": [
+        "apple",
+        "banana",
+        "person"
+      ],
+      "file": null
+    },
+    "2346757": {
+      "objects": [
+        "bench",
+        "person",
+        "tie",
+        "train"
+      ],
+      "file": null
+    },
+    "2346795": {
+      "objects": [
+        "person",
+        "umbrella"
+      ],
+      "file": null
+    },
+    "2346826": {
+      "objects": [
+        "cow",
+        "person"
+      ],
+      "file": null
+    },
+    "2348196": {
+      "objects": [
+        "car",
+        "cow",
+        "person"
+      ],
+      "file": null
+    },
+    "2349435": {
+      "objects": [
+        "cow",
+        "zebra"
+      ],
+      "file": null
+    },
+    "2350351": {
+      "objects": [
+        "person",
+        "tennis racket"
+      ],
+      "file": null
+    },
+    "2350833": {
+      "objects": [
+        "bus",
+        "person"
+      ],
+      "file": null
+    },
+    "2351224": {
+      "objects": [
+        "car",
+        "person",
+        "umbrella"
+      ],
+      "file": null
+    },
+    "2351494": {
+      "objects": [
+        "person",
+        "potted plant",
+        "umbrella"
+      ],
+      "file": null
+    },
+    "2351563": {
+      "objects": [
+        "bench",
+        "bottle",
+        "person",
+        "tennis racket"
+      ],
+      "file": null
+    },
+    "2352443": {
+      "objects": [
+        "bicycle",
+        "person",
+        "skateboard"
+      ],
+      "file": null
+    },
+    "2353914": {
+      "objects": [
+        "apple",
+        "broccoli",
+        "carrot",
+        "person"
+      ],
+      "file": null
+    },
+    "2354359": {
+      "objects": [
+        "book",
+        "cat",
+        "couch"
+      ],
+      "file": null
+    },
+    "2354540": {
+      "objects": [
+        "chair",
+        "teddy bear"
+      ],
+      "file": null
+    },
+    "2355558": {
+      "objects": [
+        "chair",
+        "person",
+        "surfboard"
+      ],
+      "file": null
+    },
+    "2355594": {
+      "objects": [
+        "bench",
+        "car",
+        "person"
+      ],
+      "file": null
+    },
+    "2356044": {
+      "objects": [
+        "bed",
+        "book",
+        "person"
+      ],
+      "file": null
+    },
+    "2356374": {
+      "objects": [
+        "bus",
+        "car",
+        "clock",
+        "person"
+      ],
+      "file": null
+    },
+    "2356410": {
+      "objects": [
+        "bus",
+        "car",
+        "traffic light",
+        "truck"
+      ],
+      "file": null
+    },
+    "2356881": {
+      "objects": [
+        "person",
+        "surfboard"
+      ],
+      "file": null
+    },
+    "2356974": {
+      "objects": [
+        "bottle",
+        "person",
+        "potted plant",
+        "sandwich"
+      ],
+      "file": null
+    },
+    "2357271": {
+      "objects": [
+        "cake",
+        "chair",
+        "knife",
+        "person",
+        "tv"
+      ],
+      "file": null
+    },
+    "2358128": {
+      "objects": [
+        "bicycle",
+        "cell phone",
+        "person"
+      ],
+      "file": null
+    },
+    "2358172": {
+      "objects": [
+        "bed",
+        "bench"
+      ],
+      "file": null
+    },
+    "2358339": {
+      "objects": [
+        "bottle",
+        "microwave",
+        "oven"
+      ],
+      "file": null
+    },
+    "2358498": {
+      "objects": [
+        "bed",
+        "dog",
+        "tv"
+      ],
+      "file": null
+    },
+    "2358589": {
+      "objects": [
+        "bird",
+        "giraffe",
+        "person"
+      ],
+      "file": null
+    },
+    "2359200": {
+      "objects": [
+        "bench",
+        "person",
+        "scissors"
+      ],
+      "file": null
+    },
+    "2360172": {
+      "objects": [
+        "bicycle",
+        "motorcycle",
+        "person"
+      ],
+      "file": null
+    },
+    "2360667": {
+      "objects": [
+        "person",
+        "tie"
+      ],
+      "file": null
+    },
+    "2360728": {
+      "objects": [
+        "person",
+        "suitcase",
+        "tv"
+      ],
+      "file": null
+    },
+    "2360850": {
+      "objects": [
+        "bench",
+        "person"
+      ],
+      "file": null
+    },
+    "2361192": {
+      "objects": [
+        "bench",
+        "person"
+      ],
+      "file": null
+    },
+    "2361821": {
+      "objects": [
+        "backpack",
+        "dog",
+        "person"
+      ],
+      "file": null
+    },
+    "2361900": {
+      "objects": [
+        "horse",
+        "person"
+      ],
+      "file": null
+    },
+    "2362005": {
+      "objects": [
+        "person",
+        "snowboard"
+      ],
+      "file": null
+    },
+    "2362497": {
+      "objects": [
+        "bottle",
+        "toilet"
+      ],
+      "file": null
+    },
+    "2362629": {
+      "objects": [
+        "person",
+        "umbrella"
+      ],
+      "file": null
+    },
+    "2363077": {
+      "objects": [
+        "backpack",
+        "bed"
+      ],
+      "file": null
+    },
+    "2364009": {
+      "objects": [
+        "person",
+        "tie"
+      ],
+      "file": null
+    },
+    "2364199": {
+      "objects": [
+        "person",
+        "surfboard"
+      ],
+      "file": null
+    },
+    "2366716": {
+      "objects": [
+        "person",
+        "snowboard"
+      ],
+      "file": null
+    },
+    "2367125": {
+      "objects": [
+        "bench",
+        "elephant",
+        "person"
+      ],
+      "file": null
+    },
+    "2367132": {
+      "objects": [
+        "bottle",
+        "couch",
+        "person",
+        "remote"
+      ],
+      "file": null
+    },
+    "2367303": {
+      "objects": [
+        "dog",
+        "person",
+        "surfboard"
+      ],
+      "file": null
+    },
+    "2368200": {
+      "objects": [
+        "person",
+        "tie"
+      ],
+      "file": null
+    },
+    "2368911": {
+      "objects": [
+        "bed",
+        "chair",
+        "refrigerator",
+        "vase"
+      ],
+      "file": null
+    },
+    "2368912": {
+      "objects": [
+        "person",
+        "skateboard"
+      ],
+      "file": null
+    },
+    "2369170": {
+      "objects": [
+        "person",
+        "train"
+      ],
+      "file": null
+    },
+    "2369611": {
+      "objects": [
+        "bowl",
+        "keyboard",
+        "spoon"
+      ],
+      "file": null
+    },
+    "2369704": {
+      "objects": [
+        "bear",
+        "bottle",
+        "dog"
+      ],
+      "file": null
+    },
+    "2369829": {
+      "objects": [
+        "broccoli",
+        "carrot"
+      ],
+      "file": null
+    },
+    "2370545": {
+      "objects": [
+        "person",
+        "skis"
+      ],
+      "file": null
+    },
+    "2370778": {
+      "objects": [
+        "car",
+        "chair",
+        "clock",
+        "motorcycle",
+        "person",
+        "umbrella"
+      ],
+      "file": null
+    },
+    "2371051": {
+      "objects": [
+        "boat",
+        "person",
+        "umbrella"
+      ],
+      "file": null
+    },
+    "2371710": {
+      "objects": [
+        "bear",
+        "potted plant"
+      ],
+      "file": null
+    },
+    "2371951": {
+      "objects": [
+        "cell phone",
+        "person"
+      ],
+      "file": null
+    },
+    "2373238": {
+      "objects": [
+        "person",
+        "tie",
+        "umbrella"
+      ],
+      "file": null
+    },
+    "2373929": {
+      "objects": [
+        "person",
+        "surfboard"
+      ],
+      "file": null
+    },
+    "2375010": {
+      "objects": [
+        "car",
+        "person",
+        "train"
+      ],
+      "file": null
+    },
+    "2375383": {
+      "objects": [
+        "horse",
+        "person"
+      ],
+      "file": null
+    },
+    "2375920": {
+      "objects": [
+        "chair",
+        "kite",
+        "person",
+        "tv"
+      ],
+      "file": null
+    },
+    "2375958": {
+      "objects": [
+        "bed",
+        "person"
+      ],
+      "file": null
+    },
+    "2376044": {
+      "objects": [
+        "kite",
+        "person"
+      ],
+      "file": null
+    },
+    "2377057": {
+      "objects": [
+        "car",
+        "train"
+      ],
+      "file": null
+    },
+    "2377183": {
+      "objects": [
+        "bed",
+        "book",
+        "cat"
+      ],
+      "file": null
+    },
+    "2377680": {
+      "objects": [
+        "cake",
+        "chair",
+        "knife",
+        "person",
+        "wine glass"
+      ],
+      "file": null
+    },
+    "2377951": {
+      "objects": [
+        "person",
+        "surfboard"
+      ],
+      "file": null
+    },
+    "2377991": {
+      "objects": [
+        "backpack",
+        "bench",
+        "person"
+      ],
+      "file": null
+    },
+    "2379277": {
+      "objects": [
+        "bed",
+        "cat"
+      ],
+      "file": null
+    },
+    "2380125": {
+      "objects": [
+        "bus",
+        "chair",
+        "clock",
+        "person",
+        "suitcase"
+      ],
+      "file": null
+    },
+    "2380381": {
+      "objects": [
+        "person",
+        "surfboard"
+      ],
+      "file": null
+    },
+    "2380896": {
+      "objects": [
+        "bicycle",
+        "bus",
+        "motorcycle",
+        "person",
+        "truck"
+      ],
+      "file": null
+    },
+    "2381560": {
+      "objects": [
+        "car",
+        "person",
+        "skateboard"
+      ],
+      "file": null
+    },
+    "2382133": {
+      "objects": [
+        "cat",
+        "chair"
+      ],
+      "file": null
+    },
+    "2382600": {
+      "objects": [
+        "airplane",
+        "person"
+      ],
+      "file": null
+    },
+    "2383055": {
+      "objects": [
+        "broccoli",
+        "fork"
+      ],
+      "file": null
+    },
+    "2383289": {
+      "objects": [
+        "person",
+        "umbrella"
+      ],
+      "file": null
+    },
+    "2383516": {
+      "objects": [
+        "couch",
+        "dog",
+        "person",
+        "spoon"
+      ],
+      "file": null
+    },
+    "2384450": {
+      "objects": [
+        "bicycle",
+        "person",
+        "truck"
+      ],
+      "file": null
+    },
+    "2384792": {
+      "objects": [
+        "elephant",
+        "person"
+      ],
+      "file": null
+    },
+    "2385017": {
+      "objects": [
+        "bed",
+        "chair",
+        "couch",
+        "person"
+      ],
+      "file": null
+    },
+    "2385103": {
+      "objects": [
+        "cat",
+        "suitcase"
+      ],
+      "file": null
+    },
+    "2385439": {
+      "objects": [
+        "bed",
+        "book",
+        "vase"
+      ],
+      "file": null
+    },
+    "2385739": {
+      "objects": [
+        "frisbee",
+        "person"
+      ],
+      "file": null
+    },
+    "2386250": {
+      "objects": [
+        "cell phone",
+        "person",
+        "tv"
+      ],
+      "file": null
+    },
+    "2387404": {
+      "objects": [
+        "bicycle",
+        "motorcycle",
+        "person",
+        "truck"
+      ],
+      "file": null
+    },
+    "2387840": {
+      "objects": [
+        "bottle",
+        "bowl",
+        "knife",
+        "person",
+        "spoon"
+      ],
+      "file": null
+    },
+    "2388249": {
+      "objects": [
+        "person",
+        "skateboard"
+      ],
+      "file": null
+    },
+    "2388545": {
+      "objects": [
+        "laptop",
+        "person"
+      ],
+      "file": null
+    },
+    "2388761": {
+      "objects": [
+        "person",
+        "snowboard"
+      ],
+      "file": null
+    },
+    "2388908": {
+      "objects": [
+        "book",
+        "cup",
+        "keyboard",
+        "laptop",
+        "mouse"
+      ],
+      "file": null
+    },
+    "2389044": {
+      "objects": [
+        "chair",
+        "couch",
+        "person",
+        "potted plant",
+        "tie"
+      ],
+      "file": null
+    },
+    "2390386": {
+      "objects": [
+        "banana",
+        "bicycle",
+        "car",
+        "person"
+      ],
+      "file": null
+    },
+    "2390482": {
+      "objects": [
+        "car",
+        "person",
+        "traffic light"
+      ],
+      "file": null
+    },
+    "2390772": {
+      "objects": [
+        "person",
+        "skateboard"
+      ],
+      "file": null
+    },
+    "2391245": {
+      "objects": [
+        "bottle",
+        "person"
+      ],
+      "file": null
+    },
+    "2391524": {
+      "objects": [
+        "cell phone",
+        "person"
+      ],
+      "file": null
+    },
+    "2391636": {
+      "objects": [
+        "bed",
+        "cat",
+        "person"
+      ],
+      "file": null
+    },
+    "2393792": {
+      "objects": [
+        "person",
+        "surfboard"
+      ],
+      "file": null
+    },
+    "2393810": {
+      "objects": [
+        "dog",
+        "surfboard"
+      ],
+      "file": null
+    },
+    "2394101": {
+      "objects": [
+        "giraffe",
+        "orange",
+        "person"
+      ],
+      "file": null
+    },
+    "2394572": {
+      "objects": [
+        "car",
+        "chair",
+        "motorcycle",
+        "person",
+        "truck"
+      ],
+      "file": null
+    },
+    "2395228": {
+      "objects": [
+        "backpack",
+        "bench",
+        "bottle",
+        "person"
+      ],
+      "file": null
+    },
+    "2395420": {
+      "objects": [
+        "backpack",
+        "person",
+        "umbrella"
+      ],
+      "file": null
+    },
+    "2395597": {
+      "objects": [
+        "car",
+        "stop sign",
+        "truck"
+      ],
+      "file": null
+    },
+    "2395824": {
+      "objects": [
+        "person",
+        "tie",
+        "tv"
+      ],
+      "file": null
+    },
+    "2396383": {
+      "objects": [
+        "backpack",
+        "bicycle",
+        "bottle",
+        "person"
+      ],
+      "file": null
+    },
+    "2397098": {
+      "objects": [
+        "bus",
+        "car",
+        "traffic light"
+      ],
+      "file": null
+    },
+    "2397157": {
+      "objects": [
+        "keyboard",
+        "laptop",
+        "mouse"
+      ],
+      "file": null
+    },
+    "2398059": {
+      "objects": [
+        "person",
+        "tennis racket"
+      ],
+      "file": null
+    },
+    "2398555": {
+      "objects": [
+        "chair",
+        "person"
+      ],
+      "file": null
+    },
+    "2399178": {
+      "objects": [
+        "boat",
+        "chair",
+        "person"
+      ],
+      "file": null
+    },
+    "2399244": {
+      "objects": [
+        "book",
+        "person"
+      ],
+      "file": null
+    },
+    "2399276": {
+      "objects": [
+        "cat",
+        "person",
+        "tv"
+      ],
+      "file": null
+    },
+    "2399562": {
+      "objects": [
+        "person",
+        "toilet"
+      ],
+      "file": null
+    },
+    "2399652": {
+      "objects": [
+        "person",
+        "train"
+      ],
+      "file": null
+    },
+    "2399755": {
+      "objects": [
+        "backpack",
+        "cell phone",
+        "dog",
+        "person",
+        "suitcase",
+        "truck"
+      ],
+      "file": null
+    },
+    "2400025": {
+      "objects": [
+        "bench",
+        "person",
+        "tie"
+      ],
+      "file": null
+    },
+    "2400304": {
+      "objects": [
+        "bed",
+        "person",
+        "truck"
+      ],
+      "file": null
+    },
+    "2401057": {
+      "objects": [
+        "backpack",
+        "person",
+        "train"
+      ],
+      "file": null
+    },
+    "2401148": {
+      "objects": [
+        "person",
+        "skateboard",
+        "truck"
+      ],
+      "file": null
+    },
+    "2401202": {
+      "objects": [
+        "person",
+        "train"
+      ],
+      "file": null
+    },
+    "2402189": {
+      "objects": [
+        "person",
+        "umbrella"
+      ],
+      "file": null
+    },
+    "2402571": {
+      "objects": [
+        "bench",
+        "book",
+        "person",
+        "truck"
+      ],
+      "file": null
+    },
+    "2402804": {
+      "objects": [
+        "car",
+        "person",
+        "skateboard"
+      ],
+      "file": null
+    },
+    "2403196": {
+      "objects": [
+        "chair",
+        "elephant"
+      ],
+      "file": null
+    },
+    "2403660": {
+      "objects": [
+        "person",
+        "skateboard"
+      ],
+      "file": null
+    },
+    "2403996": {
+      "objects": [
+        "bed",
+        "car",
+        "dog"
+      ],
+      "file": null
+    },
+    "2404167": {
+      "objects": [
+        "person",
+        "umbrella"
+      ],
+      "file": null
+    },
+    "2404222": {
+      "objects": [
+        "person",
+        "skis",
+        "snowboard"
+      ],
+      "file": null
+    },
+    "2404316": {
+      "objects": [
+        "backpack",
+        "cake",
+        "person"
+      ],
+      "file": null
+    },
+    "2404523": {
+      "objects": [
+        "clock",
+        "couch",
+        "orange",
+        "person"
+      ],
+      "file": null
+    },
+    "2404536": {
+      "objects": [
+        "cell phone",
+        "person"
+      ],
+      "file": null
+    },
+    "2404766": {
+      "objects": [
+        "person",
+        "suitcase"
+      ],
+      "file": null
+    },
+    "2404852": {
+      "objects": [
+        "dog",
+        "potted plant"
+      ],
+      "file": null
+    },
+    "2405441": {
+      "objects": [
+        "bottle",
+        "chair",
+        "person",
+        "tie"
+      ],
+      "file": null
+    },
+    "2405843": {
+      "objects": [
+        "bottle",
+        "chair",
+        "clock",
+        "microwave",
+        "person"
+      ],
+      "file": null
+    },
+    "2406254": {
+      "objects": [
+        "person",
+        "sheep"
+      ],
+      "file": null
+    },
+    "2407116": {
+      "objects": [
+        "bottle",
+        "person"
+      ],
+      "file": null
+    },
+    "2407390": {
+      "objects": [
+        "person",
+        "skateboard"
+      ],
+      "file": null
+    },
+    "2407406": {
+      "objects": [
+        "motorcycle",
+        "person"
+      ],
+      "file": null
+    },
+    "2407525": {
+      "objects": [
+        "bear",
+        "bed"
+      ],
+      "file": null
+    },
+    "2407837": {
+      "objects": [
+        "bottle",
+        "bowl",
+        "spoon"
+      ],
+      "file": null
+    },
+    "2408216": {
+      "objects": [
+        "cat",
+        "dog",
+        "microwave",
+        "person",
+        "refrigerator",
+        "sink"
+      ],
+      "file": null
+    },
+    "2408318": {
+      "objects": [
+        "bench",
+        "car",
+        "person",
+        "traffic light"
+      ],
+      "file": null
+    },
+    "2408498": {
+      "objects": [
+        "bottle",
+        "dog"
+      ],
+      "file": null
+    },
+    "2408740": {
+      "objects": [
+        "chair",
+        "person",
+        "tie"
+      ],
+      "file": null
+    },
+    "2408851": {
+      "objects": [
+        "banana",
+        "bowl"
+      ],
+      "file": null
+    },
+    "2408941": {
+      "objects": [
+        "bottle",
+        "person"
+      ],
+      "file": null
+    },
+    "2409040": {
+      "objects": [
+        "bicycle",
+        "bus",
+        "person"
+      ],
+      "file": null
+    },
+    "2409290": {
+      "objects": [
+        "person",
+        "suitcase"
+      ],
+      "file": null
+    },
+    "2409302": {
+      "objects": [
+        "backpack",
+        "bicycle",
+        "bus",
+        "person",
+        "umbrella"
+      ],
+      "file": null
+    },
+    "2409630": {
+      "objects": [
+        "car",
+        "motorcycle"
+      ],
+      "file": null
+    },
+    "2409740": {
+      "objects": [
+        "bicycle",
+        "dog",
+        "person",
+        "surfboard"
+      ],
+      "file": null
+    },
+    "2410917": {
+      "objects": [
+        "dog",
+        "frisbee"
+      ],
+      "file": null
+    },
+    "2411058": {
+      "objects": [
+        "cat",
+        "sink"
+      ],
+      "file": null
+    },
+    "2411390": {
+      "objects": [
+        "car",
+        "parking meter"
+      ],
+      "file": null
+    },
+    "2411477": {
+      "objects": [
+        "motorcycle",
+        "person"
+      ],
+      "file": null
+    },
+    "2412158": {
+      "objects": [
+        "bicycle",
+        "bus",
+        "cell phone",
+        "person"
+      ],
+      "file": null
+    },
+    "2412424": {
+      "objects": [
+        "car",
+        "fire hydrant"
+      ],
+      "file": null
+    },
+    "2412607": {
+      "objects": [
+        "car",
+        "dog"
+      ],
+      "file": null
+    },
+    "2413384": {
+      "objects": [
+        "person",
+        "umbrella"
+      ],
+      "file": null
+    },
+    "2413583": {
+      "objects": [
+        "horse",
+        "person"
+      ],
+      "file": null
+    },
+    "2413622": {
+      "objects": [
+        "banana",
+        "bowl",
+        "spoon"
+      ],
+      "file": null
+    },
+    "2413959": {
+      "objects": [
+        "backpack",
+        "bicycle",
+        "motorcycle",
+        "person"
+      ],
+      "file": null
+    },
+    "2414245": {
+      "objects": [
+        "bench",
+        "person"
+      ],
+      "file": null
+    },
+    "2414693": {
+      "objects": [
+        "baseball glove",
+        "person"
+      ],
+      "file": null
+    },
+    "2414826": {
+      "objects": [
+        "cell phone",
+        "person"
+      ],
+      "file": null
+    },
+    "2414928": {
+      "objects": [
+        "backpack",
+        "person",
+        "snowboard"
+      ],
+      "file": null
+    },
+    "2415574": {
+      "objects": [
+        "frisbee",
+        "person"
+      ],
+      "file": null
+    },
+    "2415822": {
+      "objects": [
+        "cell phone",
+        "keyboard",
+        "laptop",
+        "person"
+      ],
+      "file": null
+    },
+    "2415876": {
+      "objects": [
+        "chair",
+        "frisbee",
+        "person"
+      ],
+      "file": null
+    },
+    "2417110": {
+      "objects": [
+        "cell phone",
+        "person"
+      ],
+      "file": null
+    },
+    "2417188": {
+      "objects": [
+        "motorcycle",
+        "person"
+      ],
+      "file": null
+    },
+    "2417596": {
+      "objects": [
+        "baseball glove",
+        "person",
+        "traffic light"
+      ],
+      "file": null
+    }
+  }
+}

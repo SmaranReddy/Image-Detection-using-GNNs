@@ -1,12 +1,39 @@
+# ---------------------------------------------------------------------------
+# Core: needed for the relation experiments (training, evaluation, CLIP cache,
+# Visual Genome preparation, and the test suite). Install these on the GPU box.
+#
+#   pip install -r requirements.txt
+#
+# IMPORTANT: the default PyPI `torch` wheel is CPU-only on Windows and Linux.
+# For a CUDA GPU, install torch FIRST from the PyTorch index, then this file:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+# Check with: python check_environment.py
+# ---------------------------------------------------------------------------
 torch
 torchvision
 numpy
-matplotlib
 Pillow
+transformers          # CLIP vision encoder (openai/clip-vit-base-patch32)
+requests              # prepare_visual_genome.py / download_vg.py
 tqdm
-transformers 
-accelerate 
-sentencepiece
-ultralytics
+pytest                # tests/ - the 151-test regression suite
+
+# ---------------------------------------------------------------------------
+# Optional: only needed for arms you may not be running.
+# Nothing above depends on these; check_environment.py reports them as OPTIONAL.
+# ---------------------------------------------------------------------------
+matplotlib            # plots in utils/eval_debug.py and report/
+accelerate            # transformers device_map for the BLIP captioner
+
+# --- caption / hallucination arm (CHAIR, POPE) -----------------------------
+# nltk ALSO needs its WordNet corpus, which pip does not install:
+#     python -c "import nltk; nltk.download('wordnet'); nltk.download('omw-1.4')"
+# Without it detect_coco_objects() raises and CHAIR/POPE cannot run.
 nltk
-mediapipe==0.10.14
+ultralytics           # YOLO object detection for the grounded caption pipeline
+
+# --- pose features (--use-pose only) ---------------------------------------
+# mediapipe has no wheel for several recent Python versions (3.13 included).
+# It is NOT used by any of the four visual-ablation variants. Uncomment only
+# if you actually intend to run --use-pose.
+# mediapipe==0.10.14

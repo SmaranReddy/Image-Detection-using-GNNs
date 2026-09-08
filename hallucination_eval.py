@@ -67,6 +67,61 @@ _IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 
 _clip_scorer = None
 
+# ---------------------------------------------------------------------------
+# Object ground truth
+# ---------------------------------------------------------------------------
+# Default: YOLO's own detections stand in for ground truth. That is CIRCULAR
+# for the grounded system, which is conditioned on and gated against exactly
+# those detections — it is graded against its own input. Supply
+# --gt-objects-json (see build_caption_eval_set.py) for an independent,
+# human-annotated ground truth; the source is recorded in every result file.
+
+_GT_OBJECTS: Optional[Dict[str, Set[str]]] = None
+_GT_SOURCE: str = "yolo_proxy"
+_GT_META: Dict = {}
+
+
+def load_gt_objects(path: Optional[str]) -> None:
+    """Load an external image_id -> object-set ground truth."""
+    global _GT_OBJECTS, _GT_SOURCE, _GT_META
+    if not path:
+        _GT_OBJECTS = None
+        _GT_SOURCE = "yolo_proxy"
+        _GT_META = {
+            "warning": (
+                "CHAIR/POPE scored against YOLO's own detections. The grounded "
+                "system is conditioned and gated on those same detections, so "
+                "this comparison is circular and must not be reported as "
+                "evidence of hallucination reduction."
+            ),
+        }
+        return
+    with open(path, "r", encoding="utf-8") as f:
+        payload = json.load(f)
+    images = payload.get("images", payload)
+    _GT_OBJECTS = {
+        str(k): set(v["objects"] if isinstance(v, dict) else v)
+        for k, v in images.items()
+    }
+    _GT_SOURCE = "external"
+    _GT_META = payload.get("meta", {})
+    _GT_META["path"] = path
+    print(f"[hallucination_eval] external object ground truth: {path} "
+          f"({len(_GT_OBJECTS):,} images)")
+
+
+def resolve_gt_objects(image_id: str, yolo_objects: Set[str]) -> Tuple[Set[str], str]:
+    """Ground-truth objects for one image, plus the source actually used."""
+    if _GT_OBJECTS is None:
+        return yolo_objects, "yolo_proxy"
+    key = str(image_id)
+    if key in _GT_OBJECTS:
+        return set(_GT_OBJECTS[key]), "external"
+    stem = os.path.splitext(os.path.basename(key))[0]
+    if stem in _GT_OBJECTS:
+        return set(_GT_OBJECTS[stem]), "external"
+    return yolo_objects, "yolo_proxy_fallback"
+
 
 def _ensure_clip():
     global _clip_scorer
@@ -116,6 +171,11 @@ def analyze_image(
         for d in dets
     ]
     result["yolo_objects"] = sorted(gt_objects)
+
+    # Swap in the independent ground truth when one was supplied.
+    gt_objects, gt_source = resolve_gt_objects(image_id, gt_objects)
+    result["gt_objects"] = sorted(gt_objects)
+    result["gt_source"] = gt_source
 
     # ── System 1: BLIP-2 baseline ─────────────────────────────────────
     try:
@@ -297,6 +357,15 @@ def aggregate_results(
             "total_hallucinated_assertions": int(total_hallucinated_assertions),
             "total_missed_objects": int(total_missed_objects),
             "safe_fallback_count": safe_fallback_count,
+            # A system can score a perfect CHAIR by refusing to say anything
+            # informative. These two make that failure mode visible instead of
+            # letting it read as a hallucination win.
+            "safe_fallback_rate": round(safe_fallback_count / len(per_image), 4)
+                                  if per_image else 0.0,
+            "avg_caption_words": round(
+                sum(len(str(r[sk].get("caption", "")).split())
+                    for r in per_image if sk in r) / max(
+                        sum(1 for r in per_image if sk in r), 1), 2),
         }
 
     return agg
@@ -423,16 +492,43 @@ def _save_json(data, path: str):
 # ---------------------------------------------------------------------------
 
 def run_hallucination_eval(args):
-    output_root = Path(OUTPUT_DIR)
+    # Honour --output-dir; this used to always write to the module constant.
+    output_root = Path(getattr(args, "output_dir", None) or OUTPUT_DIR)
     per_image_dir = output_root / "per_image"
     os.makedirs(str(per_image_dir), exist_ok=True)
 
     # ── Load images ──────────────────────────────────────────────────
-    image_paths = _list_image_paths(args.image_dir)
+    if getattr(args, "images_from_gt", False):
+        # Take the image set straight from the ground-truth manifest, so the
+        # images evaluated and the objects scored against always agree.
+        if _GT_OBJECTS is None:
+            raise SystemExit(
+                "[hallucination_eval] --images-from-gt requires --gt-objects-json"
+            )
+        with open(args.gt_objects_json, "r", encoding="utf-8") as f:
+            gt_payload = json.load(f)
+        image_paths = [
+            Path(entry["file"])
+            for entry in gt_payload.get("images", {}).values()
+            if isinstance(entry, dict) and entry.get("file")
+            and os.path.isfile(entry["file"])
+        ]
+        image_paths.sort(key=lambda q: q.stem)
+        source_desc = f"ground-truth manifest '{args.gt_objects_json}'"
+    else:
+        image_paths = _list_image_paths(args.image_dir)
+        source_desc = f"'{args.image_dir}/'"
+
     if args.num_samples is not None:
         image_paths = image_paths[:args.num_samples]
 
-    print(f"[hallucination_eval] Loaded {len(image_paths)} images from '{args.image_dir}/'")
+    print(f"[hallucination_eval] Loaded {len(image_paths)} images from {source_desc}")
+    print(f"[hallucination_eval] Object ground truth: {_GT_SOURCE}")
+    if _GT_SOURCE == "yolo_proxy":
+        print("[hallucination_eval] WARNING: CHAIR/POPE are being scored against "
+              "YOLO's own detections. The grounded system is conditioned and "
+              "gated on those detections, so the comparison is CIRCULAR. Pass "
+              "--gt-objects-json for an independent ground truth.")
     print(f"[hallucination_eval] Systems: {args.systems or 'all three'}")
     print()
 
@@ -473,6 +569,17 @@ def run_hallucination_eval(args):
 
     # ── Compute aggregates ──────────────────────────────────────────
     agg = aggregate_results(per_image)
+    agg["ground_truth"] = {
+        "source": _GT_SOURCE,
+        "circular": _GT_SOURCE == "yolo_proxy",
+        "n_images_scored_against_external_gt": sum(
+            1 for r in per_image if r.get("gt_source") == "external"
+        ),
+        "n_images_fell_back_to_yolo": sum(
+            1 for r in per_image if r.get("gt_source", "").startswith("yolo_proxy")
+        ),
+        "meta": _GT_META,
+    }
     summary_path = output_root / "system_summary.json"
     _save_json(agg, str(summary_path))
     print(f"[hallucination_eval] Saved system summary to {summary_path}")
@@ -639,11 +746,25 @@ def main():
         "--seed", type=int, default=42,
         help="Random seed for reproducibility",
     )
+    parser.add_argument(
+        "--images-from-gt", dest="images_from_gt", action="store_true",
+        help="Take the image list from --gt-objects-json instead of "
+             "--image-dir, so the evaluated images and the scored ground "
+             "truth are guaranteed to match",
+    )
+    parser.add_argument(
+        "--gt-objects-json", type=str, default=None,
+        help="Independent object ground truth produced by "
+             "build_caption_eval_set.py. Without it CHAIR/POPE fall back to "
+             "YOLO's own detections, which is CIRCULAR for the grounded "
+             "system and is flagged as such in the output.",
+    )
 
     args = parser.parse_args()
 
     from utils.seed import set_seed
     set_seed(args.seed)
+    load_gt_objects(args.gt_objects_json)
 
     start = time.time()
     run_hallucination_eval(args)

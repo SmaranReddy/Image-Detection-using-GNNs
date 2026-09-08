@@ -1,0 +1,410 @@
+{
+  "experiment": "E0",
+  "description": "Image-disjoint ground-truth Visual Genome relation evaluation. Raw logits only: no temperature, priors, calibration, adaptive margins, heuristic correction or gating. PAD/UNK excluded from the candidate set and from scoring.",
+  "checkpoint": {
+    "path": "C:/Users/Asus/OneDrive/Desktop/Image Detection using GNNs/checkpoints/relation_mlp.pt",
+    "sha256": "2720dbb027ef257ccfa600b63394273d20557e931a892bce58221969aa9c5802",
+    "inferred_config": {
+      "wrapper_format": "bare_state_dict",
+      "model_type": "mlp",
+      "num_labels": 80,
+      "num_predicates": 21,
+      "embed_dim": 64,
+      "hidden_dims": [
+        256,
+        128
+      ],
+      "clip_dim": 0,
+      "pose_dim": 0,
+      "union_dim": 0,
+      "geo_dim": 5,
+      "input_dim": 133,
+      "feature_mode": "geometry-only"
+    },
+    "parameter_count": 75029,
+    "label_vocab_path": "C:/Users/Asus/OneDrive/Desktop/Image Detection using GNNs/checkpoints/label_vocab.json",
+    "pred_vocab_path": "C:/Users/Asus/OneDrive/Desktop/Image Detection using GNNs/checkpoints/pred_vocab.json"
+  },
+  "split": {
+    "manifest_path": "C:/Users/Asus/OneDrive/Desktop/Image Detection using GNNs/splits/e0_image_split.json",
+    "seed": 42,
+    "split_unit": "image_id",
+    "fractions": {
+      "train": 0.7,
+      "val": 0.15,
+      "test": 0.15
+    },
+    "n_images_train": 19001,
+    "n_images_val": 4071,
+    "n_images_test": 4073,
+    "n_samples_train": 48191,
+    "n_samples_val": 10482,
+    "n_samples_test": 10227,
+    "image_overlap_check": {
+      "train_n_val": 0,
+      "train_n_test": 0,
+      "val_n_test": 0,
+      "status": "PASS",
+      "note": "image-level disjointness verified; no image appears in two splits"
+    }
+  },
+  "data": {
+    "n_images_in_relationships_json": 108077,
+    "raw_count": 2316104,
+    "kept_count": 68900,
+    "skipped_small_box": 1587,
+    "retention": 0.029748,
+    "qualifying_image_count": 27145
+  },
+  "metrics": {
+    "top1": 0.553437,
+    "recall@3": 0.848049,
+    "recall@5": 0.889606,
+    "macro_f1": 0.301131,
+    "weighted_f1": 0.51118,
+    "n_test_samples": 10227,
+    "n_correct_top1": 5660,
+    "macro_f1_note": "mean F1 over predicates with support > 0",
+    "zero_support_predicates": [
+      "next to"
+    ],
+    "n_zero_support_predicates": 1,
+    "majority_baseline": 0.341254,
+    "random_baseline": 0.053877
+  },
+  "baselines": {
+    "majority_baseline": 0.341254,
+    "majority_class": "on",
+    "majority_class_source": "most frequent predicate in the TRAIN split",
+    "random_baseline": 0.053877,
+    "random_baseline_note": "uniform over 19 valid predicates, random.Random(42), deterministic"
+  },
+  "per_predicate": {
+    "above": {
+      "precision": 1.0,
+      "recall": 0.114754,
+      "f1": 0.205882,
+      "support": 61,
+      "predicted_count": 7,
+      "true_positives": 7
+    },
+    "attached to": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 29,
+      "predicted_count": 0,
+      "true_positives": 0
+    },
+    "behind": {
+      "precision": 0.489489,
+      "recall": 0.431217,
+      "f1": 0.458509,
+      "support": 378,
+      "predicted_count": 333,
+      "true_positives": 163
+    },
+    "carrying": {
+      "precision": 0.641026,
+      "recall": 0.084746,
+      "f1": 0.149701,
+      "support": 295,
+      "predicted_count": 39,
+      "true_positives": 25
+    },
+    "covering": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 13,
+      "predicted_count": 0,
+      "true_positives": 0
+    },
+    "holding": {
+      "precision": 0.544194,
+      "recall": 0.781581,
+      "f1": 0.641635,
+      "support": 1607,
+      "predicted_count": 2308,
+      "true_positives": 1256
+    },
+    "in": {
+      "precision": 0.773438,
+      "recall": 0.528,
+      "f1": 0.627575,
+      "support": 750,
+      "predicted_count": 512,
+      "true_positives": 396
+    },
+    "in front of": {
+      "precision": 0.583333,
+      "recall": 0.042424,
+      "f1": 0.079096,
+      "support": 165,
+      "predicted_count": 12,
+      "true_positives": 7
+    },
+    "inside": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 75,
+      "predicted_count": 0,
+      "true_positives": 0
+    },
+    "looking at": {
+      "precision": 0.392157,
+      "recall": 0.108108,
+      "f1": 0.169492,
+      "support": 185,
+      "predicted_count": 51,
+      "true_positives": 20
+    },
+    "near": {
+      "precision": 0.555655,
+      "recall": 0.58562,
+      "f1": 0.570244,
+      "support": 1057,
+      "predicted_count": 1114,
+      "true_positives": 619
+    },
+    "next to": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 0,
+      "predicted_count": 0,
+      "true_positives": 0
+    },
+    "on": {
+      "precision": 0.538294,
+      "recall": 0.708883,
+      "f1": 0.611922,
+      "support": 3490,
+      "predicted_count": 4596,
+      "true_positives": 2474
+    },
+    "over": {
+      "precision": 0.254545,
+      "recall": 0.451613,
+      "f1": 0.325581,
+      "support": 31,
+      "predicted_count": 55,
+      "true_positives": 14
+    },
+    "riding": {
+      "precision": 0.434783,
+      "recall": 0.429958,
+      "f1": 0.432357,
+      "support": 721,
+      "predicted_count": 713,
+      "true_positives": 310
+    },
+    "sitting on": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 579,
+      "predicted_count": 0,
+      "true_positives": 0
+    },
+    "standing on": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 128,
+      "predicted_count": 0,
+      "true_positives": 0
+    },
+    "under": {
+      "precision": 0.721649,
+      "recall": 0.227273,
+      "f1": 0.345679,
+      "support": 308,
+      "predicted_count": 97,
+      "true_positives": 70
+    },
+    "wearing": {
+      "precision": 0.766667,
+      "recall": 0.842254,
+      "f1": 0.802685,
+      "support": 355,
+      "predicted_count": 390,
+      "true_positives": 299
+    }
+  },
+  "confusion_matrix": {
+    "in": {
+      "in": 396,
+      "on": 269,
+      "near": 36,
+      "wearing": 26,
+      "holding": 18,
+      "over": 3,
+      "riding": 1,
+      "carrying": 1
+    },
+    "wearing": {
+      "wearing": 299,
+      "on": 39,
+      "holding": 10,
+      "carrying": 3,
+      "in": 2,
+      "riding": 1,
+      "near": 1
+    },
+    "in front of": {
+      "near": 78,
+      "on": 38,
+      "behind": 18,
+      "holding": 9,
+      "in": 8,
+      "in front of": 7,
+      "looking at": 3,
+      "over": 2,
+      "riding": 1,
+      "under": 1
+    },
+    "near": {
+      "near": 619,
+      "on": 245,
+      "behind": 83,
+      "holding": 45,
+      "in": 21,
+      "riding": 19,
+      "looking at": 12,
+      "under": 6,
+      "over": 3,
+      "in front of": 3,
+      "carrying": 1
+    },
+    "under": {
+      "holding": 83,
+      "under": 70,
+      "near": 63,
+      "behind": 43,
+      "on": 38,
+      "in": 5,
+      "carrying": 3,
+      "in front of": 2,
+      "over": 1
+    },
+    "behind": {
+      "behind": 163,
+      "near": 134,
+      "on": 61,
+      "holding": 6,
+      "under": 6,
+      "in": 4,
+      "over": 2,
+      "looking at": 1,
+      "riding": 1
+    },
+    "on": {
+      "on": 2474,
+      "holding": 527,
+      "riding": 343,
+      "near": 75,
+      "in": 35,
+      "behind": 14,
+      "looking at": 9,
+      "under": 5,
+      "over": 4,
+      "wearing": 3,
+      "carrying": 1
+    },
+    "riding": {
+      "riding": 310,
+      "on": 278,
+      "holding": 130,
+      "in": 3
+    },
+    "sitting on": {
+      "on": 535,
+      "riding": 29,
+      "holding": 8,
+      "in": 5,
+      "near": 2
+    },
+    "holding": {
+      "holding": 1256,
+      "on": 286,
+      "near": 28,
+      "wearing": 17,
+      "riding": 6,
+      "looking at": 5,
+      "carrying": 4,
+      "under": 3,
+      "behind": 1,
+      "in": 1
+    },
+    "looking at": {
+      "holding": 78,
+      "near": 42,
+      "on": 35,
+      "looking at": 20,
+      "behind": 7,
+      "wearing": 3
+    },
+    "carrying": {
+      "holding": 114,
+      "on": 99,
+      "wearing": 42,
+      "carrying": 25,
+      "near": 10,
+      "under": 3,
+      "over": 1,
+      "riding": 1
+    },
+    "covering": {
+      "over": 8,
+      "near": 3,
+      "on": 2
+    },
+    "above": {
+      "over": 17,
+      "on": 15,
+      "near": 11,
+      "above": 7,
+      "holding": 5,
+      "behind": 3,
+      "in": 1,
+      "looking at": 1,
+      "under": 1
+    },
+    "standing on": {
+      "on": 105,
+      "holding": 18,
+      "near": 3,
+      "carrying": 1,
+      "riding": 1
+    },
+    "inside": {
+      "on": 44,
+      "in": 28,
+      "near": 3
+    },
+    "over": {
+      "over": 14,
+      "on": 11,
+      "near": 3,
+      "holding": 1,
+      "behind": 1,
+      "in": 1
+    },
+    "attached to": {
+      "on": 22,
+      "near": 3,
+      "under": 2,
+      "in": 2
+    }
+  },
+  "runtime": {
+    "device": "cpu",
+    "elapsed_seconds": 15.69,
+    "timestamp_utc": "2026-08-16T11:03:44.261989+00:00",
+    "python": "3.13.7",
+    "torch": "2.10.0+cpu",
+    "platform": "Windows-11-10.0.26200-SP0"
+  }
+}

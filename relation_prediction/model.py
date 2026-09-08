@@ -10,8 +10,11 @@ Architecture
     → Linear → logits (num_predicates)
 
 Visual features (CLIP embeddings) are optional:
-    - When clip_dim=0:  input = 2*embed_dim + GEO_DIM        (geometry-only)
-    - When clip_dim>0:  input = 2*embed_dim + GEO_DIM + 2*clip_dim  (visual-semantic)
+    - When clip_dim=0:  input = 2*embed_dim + geo_dim        (geometry-only)
+    - When clip_dim>0:  input = 2*embed_dim + geo_dim + 2*clip_dim  (visual-semantic)
+
+geo_dim is 5 for the legacy descriptor and 19 for the extended one
+(see relation_prediction.vg_dataset.extract_geo_features_ext).
 
 * union_visual and pose_features are optional interaction-aware augmentations:
     - union_dim: CLIP embedding of the union region covering both subject and object
@@ -30,7 +33,7 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 
-from .vg_dataset import GEO_DIM, POSE_FEATURE_DIM, UNION_FEATURE_DIM
+from .vg_dataset import GEO_DIM, GEO_DIM_EXT, POSE_FEATURE_DIM, UNION_FEATURE_DIM
 
 
 class RelationMLP(nn.Module):
@@ -44,6 +47,12 @@ class RelationMLP(nn.Module):
         clip_dim:       Dimension of CLIP visual embeddings (0 = no visual features).
         pose_dim:       Dimension of pose features (0 = no pose features).
         union_dim:      Dimension of union-region CLIP embedding (0 = no union).
+        geo_dim:        Geometry descriptor width (GEO_DIM=5 legacy,
+                        GEO_DIM_EXT=19 extended).
+        geo_norm:       Standardise the geometry block with a BatchNorm1d.
+                        The running statistics live in the state_dict, so the
+                        exact training-time normalisation is restored at
+                        inference with no extra checkpoint plumbing.
     """
 
     def __init__(
@@ -56,6 +65,8 @@ class RelationMLP(nn.Module):
         clip_dim: int = 0,
         pose_dim: int = 0,
         union_dim: int = 0,
+        geo_dim: int = GEO_DIM,
+        geo_norm: bool = False,
     ) -> None:
         super().__init__()
 
@@ -63,8 +74,12 @@ class RelationMLP(nn.Module):
         self.clip_dim = clip_dim
         self.pose_dim = pose_dim
         self.union_dim = union_dim
+        self.geo_dim = geo_dim
+        if geo_norm and geo_dim == 0:
+            raise ValueError("geo_norm=True is meaningless with geo_dim=0")
+        self.geo_norm = nn.BatchNorm1d(geo_dim) if geo_norm else None
 
-        in_dim = 2 * embed_dim + GEO_DIM + 2 * clip_dim + union_dim + pose_dim
+        in_dim = 2 * embed_dim + geo_dim + 2 * clip_dim + union_dim + pose_dim
         layers: list = []
         prev = in_dim
         for h in hidden_dims:
@@ -90,9 +105,18 @@ class RelationMLP(nn.Module):
         se = self.label_emb(subj_idx)         # (B, embed_dim)
         oe = self.label_emb(obj_idx)          # (B, embed_dim)
 
+        if self.geo_norm is not None:
+            geo = self.geo_norm(geo)
+
         components = [se, oe, geo]
 
-        if subj_feat is not None and obj_feat is not None:
+        # The clip_dim guard matters: the geometry control of the feature
+        # ablation loads the CLIP cache (to fix the sample population) but is
+        # built with clip_dim=0, so the loader still hands it subj/obj feats.
+        # Without this check those 1536 columns would be concatenated onto a
+        # model whose first Linear never allocated weights for them, and the
+        # run would die in the first batch instead of training the control.
+        if self.clip_dim > 0 and subj_feat is not None and obj_feat is not None:
             components.append(subj_feat)
             components.append(obj_feat)
 

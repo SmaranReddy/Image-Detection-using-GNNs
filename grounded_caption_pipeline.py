@@ -55,6 +55,7 @@ from utils.blip_captioner import (
     generate_blip_baseline,
     generate_blip_candidates,
     generate_blip_semantic_caption,
+    build_blip_prefix,
     build_grounded_prompt,
     build_semantic_prompt,
     verbalize_relation,
@@ -255,14 +256,20 @@ def build_semantic_prompt_step(
         verbalized.append(vr)
 
     prompt = build_semantic_prompt(detections, verbalized)
+    prefix, injected = build_blip_prefix(detections, relations)
 
     print(f"\n  Verbalized relations:")
     for v in verbalized:
         print(f"    - {v}")
 
-    print(f"\n  Prompt ({len(prompt)} chars):")
+    print(f"\n  Evidence block ({len(prompt)} chars) — reported only; BLIP-base "
+          f"is not instruction-tuned and does not read it:")
     for line in prompt.split("\n"):
         print(f"    {line}")
+
+    print(f"\n  BLIP conditioning prefix (this IS what generation starts from):")
+    print(f"    {prefix!r}")
+    print(f"    relations injected: {len(injected)}")
 
     return prompt, verbalized
 
@@ -1086,7 +1093,10 @@ def main():
                     subj_box = tuple(a["box"])
                     obj_box = tuple(b["box"])
 
-                    geo = rel_predict.extract_geo_features(subj_box, obj_box, img_w, img_h)
+                    # Use the extractor that matches the LOADED checkpoint, not
+                    # the 5-dim one: a 19-dim model fed a 5-dim vector is a
+                    # shape error, and a silent feature mismatch if it fits.
+                    geo = rel_predict._model_geo_fn(subj_box, obj_box, img_w, img_h)
                     geo_t = torch.tensor([geo], dtype=torch.float32)
 
                     subj_feat_t: Optional[torch.Tensor] = None

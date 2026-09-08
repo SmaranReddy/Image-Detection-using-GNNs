@@ -29,7 +29,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .vg_dataset import GEO_DIM, POSE_FEATURE_DIM, UNION_FEATURE_DIM
+from .vg_dataset import GEO_DIM, GEO_DIM_EXT, POSE_FEATURE_DIM, UNION_FEATURE_DIM
 
 
 class _AttentionEncoderLayer(nn.TransformerEncoderLayer):
@@ -138,6 +138,8 @@ class RelationTransformer(nn.Module):
         clip_dim: int = 0,
         pose_dim: int = 0,
         union_dim: int = 0,
+        geo_dim: int = GEO_DIM,
+        geo_norm: bool = False,
     ) -> None:
         super().__init__()
 
@@ -146,6 +148,7 @@ class RelationTransformer(nn.Module):
         self.pose_dim = pose_dim
         self.union_dim = union_dim
         self.embed_dim = embed_dim
+        self.geo_dim = geo_dim
         self.num_predicates = num_predicates
 
         # Label embedding (same interface as RelationMLP)
@@ -154,7 +157,8 @@ class RelationTransformer(nn.Module):
         # ── Modality-specific projections → d_model ──
         self.subj_label_proj = nn.Linear(embed_dim, d_model)
         self.obj_label_proj = nn.Linear(embed_dim, d_model)
-        self.geo_proj = nn.Linear(GEO_DIM, d_model)
+        self.geo_proj = nn.Linear(geo_dim, d_model)
+        self.geo_norm = nn.BatchNorm1d(geo_dim) if geo_norm else None
 
         if clip_dim > 0:
             self.subj_clip_proj = nn.Linear(clip_dim, d_model)
@@ -202,10 +206,36 @@ class RelationTransformer(nn.Module):
         self._init_weights()
 
     def _init_weights(self) -> None:
-        for p in self.parameters():
-            if p.dim() > 1:
-                nn.init.xavier_uniform_(p, gain=0.1)
-        # Init output head with smaller variance
+        """Standard transformer initialisation.
+
+        The previous version applied ``xavier_uniform_(p, gain=0.1)`` to EVERY
+        parameter with ``dim() > 1``. That included all attention and FFN
+        projections, whose weights were therefore ~10x smaller than the Xavier
+        scale the residual/LayerNorm stack is designed around: signal through
+        the encoder was attenuated at every layer and the model needed far more
+        epochs to escape its near-constant initial predictions.
+
+        Projections now use the standard gain. Only the two free-standing
+        learned parameter banks (modality embeddings, predicate queries) and the
+        scalar output head keep a small init, which is where a small init is
+        actually wanted — they are added to / read from the residual stream
+        rather than being part of it.
+        """
+        for module in self.modules():
+            if isinstance(module, nn.Linear):
+                nn.init.xavier_uniform_(module.weight)
+                if module.bias is not None:
+                    nn.init.zeros_(module.bias)
+            elif isinstance(module, nn.Embedding):
+                nn.init.normal_(module.weight, std=0.02)
+                if module.padding_idx is not None:
+                    with torch.no_grad():
+                        module.weight[module.padding_idx].fill_(0.0)
+
+        nn.init.normal_(self.modality_emb, std=0.02)
+        nn.init.normal_(self.pred_queries, std=0.02)
+
+        # Scalar read-out head: small init keeps the initial logits flat.
         nn.init.normal_(self.output.weight, std=0.01)
         nn.init.zeros_(self.output.bias)
 
@@ -345,6 +375,8 @@ class RelationTransformer(nn.Module):
         mod_ids.append(1)
 
         # Token 2: geometry
+        if self.geo_norm is not None:
+            geo = self.geo_norm(geo)
         tokens.append(self.geo_proj(geo).unsqueeze(1))
         mod_ids.append(2)
 
